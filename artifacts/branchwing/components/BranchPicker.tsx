@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { branchHasAnyPrice, branchTotalPrice, fmtPrice } from "@/lib/time";
 import type { Branch } from "@/lib/types";
 
 type Props = {
@@ -36,6 +37,8 @@ export function BranchPicker({
     >
       {branches.map((b) => {
         const active = b.id === activeBranchId;
+        const hasPrice = branchHasAnyPrice(b.segments);
+        const total = branchTotalPrice(b.segments);
         return (
           <Pressable
             key={b.id}
@@ -63,29 +66,34 @@ export function BranchPicker({
                 },
               ]}
             />
-            <Text
-              style={[
-                styles.chipText,
-                {
-                  color: active ? "#fff" : colors.foreground,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {b.label}
-            </Text>
-            <Text
-              style={[
-                styles.chipCount,
-                {
-                  color: active
-                    ? "rgba(255,255,255,0.8)"
-                    : colors.mutedForeground,
-                },
-              ]}
-            >
-              {b.segments.length}
-            </Text>
+            <View style={styles.chipText}>
+              <Text
+                style={[
+                  styles.chipLabel,
+                  {
+                    color: active ? "#fff" : colors.foreground,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {b.label}
+              </Text>
+              <Text
+                style={[
+                  styles.chipMeta,
+                  {
+                    color: active
+                      ? "rgba(255,255,255,0.85)"
+                      : colors.mutedForeground,
+                  },
+                ]}
+                numberOfLines={1}
+              >
+                {b.segments.length} flight
+                {b.segments.length === 1 ? "" : "s"}
+                {hasPrice ? ` · ${fmtPrice(total)}` : ""}
+              </Text>
+            </View>
           </Pressable>
         );
       })}
@@ -133,13 +141,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chipText: {
+    flexShrink: 1,
+  },
+  chipLabel: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
-  chipCount: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    marginLeft: 2,
+  chipMeta: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: 1,
+    letterSpacing: 0.3,
   },
   newBtn: {
     flexDirection: "row",

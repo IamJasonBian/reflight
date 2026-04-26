@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import type { Trip } from "./types";
 
-const KEY = "branchwing.trips.v1";
+const KEY = "branchwing.trips.v2";
 
 export async function loadTrips(): Promise<Trip[]> {
   try {

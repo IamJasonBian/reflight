@@ -20,7 +20,14 @@ import { Pill } from "@/components/Pill";
 import { TimeSpine } from "@/components/TimeSpine";
 import { useColors } from "@/hooks/useColors";
 import { useTrips } from "@/contexts/TripsContext";
-import { durationMs, fmtDate, fmtDuration } from "@/lib/time";
+import {
+  branchHasAnyPrice,
+  branchTotalPrice,
+  durationMs,
+  fmtDate,
+  fmtDuration,
+  fmtPrice,
+} from "@/lib/time";
 import type { Segment } from "@/lib/types";
 
 type ViewMode = "spine" | "tree";
@@ -79,6 +86,8 @@ export default function TripScreen() {
     activeBranch.segments.length > 0
       ? durationMs(activeBranch.segments[0].depart, branchEnd)
       : 0;
+  const branchTotal = branchTotalPrice(activeBranch.segments);
+  const branchHasPrice = branchHasAnyPrice(activeBranch.segments);
 
   const handleSelectBranch = (branchId: string) => {
     setActiveBranch(trip.id, branchId);
@@ -230,6 +239,13 @@ export default function TripScreen() {
               label={`${fmtDuration(totalDuration)} airborne`}
               color={colors.mutedForeground}
               bg={colors.muted}
+            />
+          )}
+          {branchHasPrice && (
+            <Pill
+              label={`${fmtPrice(branchTotal)} total`}
+              color="#fff"
+              bg={activeBranch.color}
             />
           )}
         </View>

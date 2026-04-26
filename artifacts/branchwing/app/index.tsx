@@ -16,7 +16,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useTrips } from "@/contexts/TripsContext";
-import { fmtDate } from "@/lib/time";
+import {
+  branchHasAnyPrice,
+  branchTotalPrice,
+  fmtDate,
+  fmtPrice,
+} from "@/lib/time";
 import type { Trip } from "@/lib/types";
 
 export default function HomeScreen() {
@@ -102,6 +107,13 @@ function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
     for (const s of b.segments) destinations.add(s.toCity);
   }
 
+  const pricedBranches = trip.branches.filter((b) =>
+    branchHasAnyPrice(b.segments),
+  );
+  const branchTotals = pricedBranches.map((b) => branchTotalPrice(b.segments));
+  const minPrice = branchTotals.length ? Math.min(...branchTotals) : null;
+  const maxPrice = branchTotals.length ? Math.max(...branchTotals) : null;
+
   return (
     <Pressable
       onPress={onPress}
@@ -173,6 +185,26 @@ function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
           </Text>
         )}
       </View>
+
+      {minPrice != null && maxPrice != null && (
+        <View
+          style={[
+            styles.priceFooter,
+            { borderTopColor: colors.border },
+          ]}
+        >
+          <Feather name="tag" size={12} color={colors.primary} />
+          <Text style={[styles.priceFooterLabel, { color: colors.mutedForeground }]}>
+            Branch range
+          </Text>
+          <View style={{ flex: 1 }} />
+          <Text style={[styles.priceFooterValue, { color: colors.foreground }]}>
+            {minPrice === maxPrice
+              ? fmtPrice(minPrice)
+              : `${fmtPrice(minPrice)} – ${fmtPrice(maxPrice)}`}
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -335,6 +367,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     textTransform: "uppercase",
     letterSpacing: 1.2,
+  },
+  priceFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+  },
+  priceFooterLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.3,
+  },
+  priceFooterValue: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
   },
   empty: {
     flex: 1,

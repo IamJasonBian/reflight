@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { useColors } from "@/hooks/useColors";
+import { branchHasAnyPrice, branchTotalPrice, fmtPrice } from "@/lib/time";
 import type { Branch } from "@/lib/types";
 
 type Props = {
@@ -170,6 +171,9 @@ export function BranchTree({ branches, activeBranchId, onSelect }: Props) {
             >
               {l.branch.segments.length} flight
               {l.branch.segments.length === 1 ? "" : "s"}
+              {branchHasAnyPrice(l.branch.segments)
+                ? ` · ${fmtPrice(branchTotalPrice(l.branch.segments))}`
+                : ""}
             </Text>
           </Pressable>
         );

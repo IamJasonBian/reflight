@@ -8,6 +8,7 @@ export type Segment = {
   arrive: string;
   airline: string;
   flightNo: string;
+  price?: number;
 };
 
 export type Branch = {

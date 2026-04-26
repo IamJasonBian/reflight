@@ -13,6 +13,7 @@ import {
   durationMs,
   fmtDayLabel,
   fmtDuration,
+  fmtPrice,
   fmtTime,
 } from "@/lib/time";
 import type { Branch, Segment } from "@/lib/types";
@@ -288,6 +289,23 @@ export function TimeSpine({
                         >
                           {seg.airline} · {seg.flightNo}
                         </Text>
+                        {typeof seg.price === "number" && seg.price > 0 && (
+                          <View
+                            style={[
+                              styles.segPrice,
+                              { backgroundColor: `${branch.color}22` },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.segPriceText,
+                                { color: branch.color },
+                              ]}
+                            >
+                              {fmtPrice(seg.price)}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                       {onForkAfter && (
                         <Pressable
@@ -597,6 +615,16 @@ const styles = StyleSheet.create({
   segMetaText: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
+  },
+  segPrice: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    marginLeft: 4,
+  },
+  segPriceText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
   },
   forkBtn: {
     flexDirection: "row",

@@ -73,3 +73,21 @@ export function fmtDayLabel(iso: string): string {
 export function genId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
 }
+
+export function fmtPrice(value: number | undefined | null): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  if (value >= 10000) {
+    return `$${(value / 1000).toFixed(1)}k`;
+  }
+  return `$${Math.round(value).toLocaleString()}`;
+}
+
+export function branchTotalPrice(
+  segments: { price?: number }[],
+): number {
+  return segments.reduce((sum, s) => sum + (s.price ?? 0), 0);
+}
+
+export function branchHasAnyPrice(segments: { price?: number }[]): boolean {
+  return segments.some((s) => typeof s.price === "number" && s.price > 0);
+}

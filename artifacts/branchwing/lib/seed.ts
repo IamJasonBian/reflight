@@ -35,6 +35,7 @@ export function buildSeedTrips(): Trip[] {
         arrive: directArr,
         airline: "Air France",
         flightNo: "AF23",
+        price: 685,
       },
     ],
   };
@@ -57,6 +58,7 @@ export function buildSeedTrips(): Trip[] {
         arrive: addHours(isoAt(base, 19, 0), 5.5),
         airline: "Icelandair",
         flightNo: "FI614",
+        price: 295,
       },
       {
         id: genId(),
@@ -68,6 +70,7 @@ export function buildSeedTrips(): Trip[] {
         arrive: addHours(isoAt(base, 19, 0), 12),
         airline: "Icelandair",
         flightNo: "FI544",
+        price: 240,
       },
     ],
   };
@@ -90,6 +93,7 @@ export function buildSeedTrips(): Trip[] {
         arrive: addDays(directArr, 1),
         airline: "Delta",
         flightNo: "DL264",
+        price: 540,
       },
     ],
   };

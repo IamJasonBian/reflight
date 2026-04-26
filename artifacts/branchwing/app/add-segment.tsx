@@ -53,12 +53,21 @@ export default function AddSegmentScreen() {
   const [arrive, setArrive] = useState<string>(addHours(initialDepart, 3));
   const [airline, setAirline] = useState<string>(AIRLINES[0]);
   const [flightNo, setFlightNo] = useState<string>("");
+  const [priceText, setPriceText] = useState<string>("");
 
   const canSave =
     from &&
     to &&
     from.code !== to.code &&
     new Date(arrive).getTime() > new Date(depart).getTime();
+
+  const parsedPrice = (() => {
+    const cleaned = priceText.replace(/[^0-9.]/g, "");
+    if (!cleaned) return undefined;
+    const n = parseFloat(cleaned);
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    return n;
+  })();
 
   const onSave = () => {
     if (!canSave || !from || !to || !trip || !branch) return;
@@ -71,6 +80,7 @@ export default function AddSegmentScreen() {
       arrive,
       airline,
       flightNo: flightNo.trim() || `${airline.slice(0, 2).toUpperCase()}---`,
+      price: parsedPrice,
     });
     router.back();
   };
@@ -213,25 +223,54 @@ export default function AddSegmentScreen() {
           </ScrollView>
         </View>
 
-        <View style={styles.field}>
-          <Text style={[styles.label, { color: colors.mutedForeground }]}>
-            Flight no. (optional)
-          </Text>
-          <TextInput
-            value={flightNo}
-            onChangeText={setFlightNo}
-            placeholder="DL264"
-            placeholderTextColor={colors.mutedForeground}
-            autoCapitalize="characters"
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                color: colors.foreground,
-              },
-            ]}
-          />
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>
+              Flight no.
+            </Text>
+            <TextInput
+              value={flightNo}
+              onChangeText={setFlightNo}
+              placeholder="DL264"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="characters"
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  color: colors.foreground,
+                },
+              ]}
+            />
+          </View>
+          <View style={{ width: 130 }}>
+            <Text style={[styles.label, { color: colors.mutedForeground }]}>
+              Price (USD)
+            </Text>
+            <View
+              style={[
+                styles.priceWrap,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Text style={[styles.priceSymbol, { color: colors.mutedForeground }]}>
+                $
+              </Text>
+              <TextInput
+                value={priceText}
+                onChangeText={setPriceText}
+                placeholder="0"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="decimal-pad"
+                inputMode="decimal"
+                style={[styles.priceInput, { color: colors.foreground }]}
+              />
+            </View>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -321,5 +360,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_500Medium",
     letterSpacing: 1.2,
+  },
+  priceWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+  },
+  priceSymbol: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    marginRight: 4,
+  },
+  priceInput: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontFamily: "Inter_500Medium",
   },
 });
