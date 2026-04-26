@@ -1,0 +1,75 @@
+export function fmtTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+export function fmtDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+export function fmtDateLong(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function fmtDateTime(iso: string): string {
+  return `${fmtDate(iso)} · ${fmtTime(iso)}`;
+}
+
+export function fmtDuration(ms: number): string {
+  const totalMinutes = Math.round(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours <= 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
+export function durationMs(startIso: string, endIso: string): number {
+  return new Date(endIso).getTime() - new Date(startIso).getTime();
+}
+
+export function addHours(iso: string, hours: number): string {
+  const d = new Date(iso);
+  d.setTime(d.getTime() + hours * 3600 * 1000);
+  return d.toISOString();
+}
+
+export function addDays(iso: string, days: number): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + days);
+  return d.toISOString();
+}
+
+export function startOfDay(iso: string): string {
+  const d = new Date(iso);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+export function fmtDayLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const dDay = new Date(d);
+  dDay.setHours(0, 0, 0, 0);
+
+  if (dDay.getTime() === today.getTime()) return "Today";
+  if (dDay.getTime() === tomorrow.getTime()) return "Tomorrow";
+  return d.toLocaleDateString([], {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function genId(): string {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+}
