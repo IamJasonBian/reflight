@@ -40,6 +40,10 @@ function RootLayoutNav() {
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
       <Stack.Screen
+        name="search-flights"
+        options={{ presentation: "modal", animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
         name="fork-branch"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />

@@ -93,16 +93,15 @@ export default function TripScreen() {
     setActiveBranch(trip.id, branchId);
   };
 
-  const handleAddFlight = (forkFromSegmentId?: string) => {
+  const handleAddFlight = () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
     router.push({
-      pathname: "/add-segment",
+      pathname: "/search-flights",
       params: {
         tripId: trip.id,
         branchId: activeBranch.id,
-        forkFromSegmentId: forkFromSegmentId ?? "",
       },
     });
   };
