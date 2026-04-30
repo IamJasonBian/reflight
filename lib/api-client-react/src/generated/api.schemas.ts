@@ -8,3 +8,53 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface Segment {
+  id: string;
+  fromCode: string;
+  fromCity: string;
+  toCode: string;
+  toCity: string;
+  depart: string;
+  arrive: string;
+  airline: string;
+  flightNo: string;
+  /** @nullable */
+  price?: number | null;
+}
+
+export interface Branch {
+  id: string;
+  label: string;
+  /** @nullable */
+  parentId: string | null;
+  /** @nullable */
+  forkAfterSegmentId: string | null;
+  color: string;
+  segments: Segment[];
+  createdAt: string;
+}
+
+export interface Trip {
+  id: string;
+  title: string;
+  originCity: string;
+  originCode: string;
+  startDate: string;
+  branches: Branch[];
+  activeBranchId: string;
+  createdAt: string;
+}
+
+/**
+ * Stable per-device identifier that scopes the trip data.
+ */
+export type ClientIdHeaderParameter = string;
+
+export type ReplaceTripsBody = {
+  trips: Trip[];
+};

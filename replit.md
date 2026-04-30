@@ -29,8 +29,8 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 ## Branchwing (artifacts/branchwing)
 
 iOS-feel Expo flight planning app where users branch travel plans (fork
-itineraries into alternate scenarios). Frontend-only with AsyncStorage
-persistence.
+itineraries into alternate scenarios). Offline-first AsyncStorage cache
+mirrored to a Replit-hosted Postgres backend so trips survive reinstalls.
 
 Mirrors the file structure of github.com/IamJasonBian/route-manager:
 
@@ -53,7 +53,26 @@ Screens:
 
 Storage keys:
 
-- `branchwing.trips.v2` — trips
+- `branchwing.trips.v2` — trips (local cache mirror)
 - `branchwing.savedRoutes.v1` — pinned routes
+- `branchwing.clientId.v1` — stable per-device id sent as `X-Client-Id`
+
+Trip persistence:
+
+- `services/tripsSync.ts` wraps `GET /api/trips` and `PUT /api/trips`. The
+  base URL is `EXPO_PUBLIC_API_BASE_URL` if set, else
+  `https://$EXPO_PUBLIC_DOMAIN/api`, else `/api`.
+- `contexts/TripsContext.tsx` hydrates from AsyncStorage immediately, then
+  reconciles with the server in the background. If the user mutates trips
+  while the remote fetch is in flight, the local edits win. Every change
+  triggers a 600ms-debounced PUT with a monotonic revision counter so
+  out-of-order responses can't desync the badge.
+- Server (`artifacts/api-server/src/routes/trips.ts`) is bulk-replace per
+  client: `DELETE WHERE client_id = ?` then `INSERT` inside a transaction.
+- DB schema (`lib/db/src/schema/trips.ts`): composite primary key
+  `(client_id, id)` so trip IDs only need to be unique per device.
+- Per-device `X-Client-Id` is the only access control today (MVP). Reinstall
+  on a fresh device gets a new id and starts empty — cross-device handoff
+  needs an account/linking flow which is out of scope.
 
 Run typecheck: `pnpm --filter @workspace/branchwing run typecheck`

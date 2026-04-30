@@ -29,7 +29,7 @@ export default function HomeScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { trips, loading } = useTrips();
+  const { trips, loading, syncStatus } = useTrips();
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = isWeb ? Math.max(insets.bottom, 34) : insets.bottom;
@@ -70,9 +70,12 @@ export default function HomeScreen() {
 
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <View>
-          <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>
-            Your itineraries
-          </Text>
+          <View style={styles.eyebrowRow}>
+            <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>
+              Your itineraries
+            </Text>
+            <SyncBadge status={syncStatus} />
+          </View>
           <Text style={[styles.title, { color: colors.foreground }]}>
             Branchwing
           </Text>
@@ -332,6 +335,29 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
   );
 }
 
+function SyncBadge({
+  status,
+}: {
+  status: "idle" | "syncing" | "synced" | "offline";
+}) {
+  const colors = useColors();
+  if (status === "idle") return null;
+  const map = {
+    syncing: { dot: "#F2B544", label: "Syncing" },
+    synced: { dot: "#4CD3A1", label: "Synced" },
+    offline: { dot: "#8893B8", label: "Saved locally" },
+  } as const;
+  const cfg = map[status];
+  return (
+    <View style={styles.syncBadge}>
+      <View style={[styles.syncDot, { backgroundColor: cfg.dot }]} />
+      <Text style={[styles.syncText, { color: colors.mutedForeground }]}>
+        {cfg.label}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: {
     flex: 1,
@@ -349,12 +375,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
   },
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
   eyebrow: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
     letterSpacing: 1.4,
-    marginBottom: 4,
+  },
+  syncBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  syncDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  syncText: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   title: {
     fontSize: 32,

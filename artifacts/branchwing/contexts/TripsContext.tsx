@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -12,10 +13,17 @@ import { loadTrips, saveTrips } from "@/lib/storage";
 import { buildSeedTrips } from "@/lib/seed";
 import { genId } from "@/lib/time";
 import type { Branch, Segment, Trip } from "@/lib/types";
+import {
+  fetchRemoteTrips,
+  pushRemoteTrips,
+} from "@/services/tripsSync";
+
+type SyncStatus = "idle" | "syncing" | "synced" | "offline";
 
 type TripsContextType = {
   trips: Trip[];
   loading: boolean;
+  syncStatus: SyncStatus;
   getTrip: (id: string) => Trip | undefined;
   createTrip: (input: {
     title: string;
@@ -42,10 +50,19 @@ const TripsContext = createContext<TripsContextType | null>(null);
 export function TripsProvider({ children }: { children: React.ReactNode }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  // Counts every user-driven mutation so the startup reconcile can detect
+  // edits that happened while the remote fetch was in flight.
+  const localMutationsRef = useRef<number>(0);
+  // Monotonic revision so a slow PUT response can't overwrite the status of a
+  // newer PUT that finished first.
+  const pushRevRef = useRef<number>(0);
+  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
+      // 1. Hydrate from local cache for an instant render.
       const stored = await loadTrips();
       if (!mounted) return;
       if (stored.length === 0) {
@@ -56,20 +73,61 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
         setTrips(stored);
       }
       setLoading(false);
+
+      // 2. Reconcile with the server in the background.
+      const mutationsBeforeFetch = localMutationsRef.current;
+      setSyncStatus("syncing");
+      const remote = await fetchRemoteTrips();
+      if (!mounted) return;
+
+      if (remote === null) {
+        setSyncStatus("offline");
+        return;
+      }
+
+      const userEditedDuringFetch =
+        localMutationsRef.current !== mutationsBeforeFetch;
+
+      if (remote.length > 0 && !userEditedDuringFetch) {
+        // Adopt server state only if the user hasn't started editing.
+        setTrips(remote);
+        await saveTrips(remote);
+      }
+      // In every other case the trips-effect below will debounce-push the
+      // current local state up, which makes the server converge to the device.
+      setSyncStatus("synced");
     })();
     return () => {
       mounted = false;
     };
   }, []);
 
+  // Persist to local cache on every change, and debounce a remote push.
   useEffect(() => {
-    if (!loading) {
-      saveTrips(trips).catch(() => {});
-    }
+    if (loading) return;
+    saveTrips(trips).catch(() => {});
+    if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    setSyncStatus("syncing");
+    const myRev = ++pushRevRef.current;
+    pushTimerRef.current = setTimeout(() => {
+      pushRemoteTrips(trips).then((ok) => {
+        // Drop out-of-order responses so the badge always reflects the most
+        // recent push attempt, not an older one that finished late.
+        if (myRev !== pushRevRef.current) return;
+        setSyncStatus(ok ? "synced" : "offline");
+      });
+    }, 600);
+    return () => {
+      if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    };
   }, [trips, loading]);
 
   const persist = useCallback((updater: (prev: Trip[]) => Trip[]) => {
-    setTrips((prev) => updater(prev));
+    setTrips((prev) => {
+      const next = updater(prev);
+      localMutationsRef.current += 1;
+      return next;
+    });
   }, []);
 
   const getTrip = useCallback(
@@ -250,6 +308,7 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
     () => ({
       trips,
       loading,
+      syncStatus,
       getTrip,
       createTrip,
       deleteTrip,
@@ -263,6 +322,7 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
     [
       trips,
       loading,
+      syncStatus,
       getTrip,
       createTrip,
       deleteTrip,

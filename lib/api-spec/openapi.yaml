@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: trips
+    description: Trip persistence and sync
 paths:
   /healthz:
     get:
@@ -24,7 +26,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /trips:
+    get:
+      operationId: listTrips
+      tags: [trips]
+      summary: List trips for a client
+      description: Returns all trips that belong to the given client device.
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+      responses:
+        "200":
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trip"
+        "400":
+          description: Missing or invalid client id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: replaceTrips
+      tags: [trips]
+      summary: Replace all trips for a client
+      description: >-
+        Bulk-upserts the full list of trips for the given client device.
+        Any trips previously stored for this client that are not in the body
+        are deleted. This makes the endpoint idempotent and easy to call after
+        every local change.
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trips]
+              properties:
+                trips:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/Trip"
+      responses:
+        "200":
+          description: Updated list of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trip"
+        "400":
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
+  parameters:
+    ClientIdHeader:
+      in: header
+      name: X-Client-Id
+      required: true
+      description: Stable per-device identifier that scopes the trip data.
+      schema:
+        type: string
+        minLength: 1
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +105,99 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    Segment:
+      type: object
+      required:
+        - id
+        - fromCode
+        - fromCity
+        - toCode
+        - toCity
+        - depart
+        - arrive
+        - airline
+        - flightNo
+      properties:
+        id:
+          type: string
+        fromCode:
+          type: string
+        fromCity:
+          type: string
+        toCode:
+          type: string
+        toCity:
+          type: string
+        depart:
+          type: string
+        arrive:
+          type: string
+        airline:
+          type: string
+        flightNo:
+          type: string
+        price:
+          type: ["number", "null"]
+    Branch:
+      type: object
+      required:
+        - id
+        - label
+        - parentId
+        - forkAfterSegmentId
+        - color
+        - segments
+        - createdAt
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        parentId:
+          type: ["string", "null"]
+        forkAfterSegmentId:
+          type: ["string", "null"]
+        color:
+          type: string
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Segment"
+        createdAt:
+          type: string
+    Trip:
+      type: object
+      required:
+        - id
+        - title
+        - originCity
+        - originCode
+        - startDate
+        - branches
+        - activeBranchId
+        - createdAt
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        originCity:
+          type: string
+        originCode:
+          type: string
+        startDate:
+          type: string
+        branches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Branch"
+        activeBranchId:
+          type: string
+        createdAt:
+          type: string
