@@ -25,3 +25,35 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## Branchwing (artifacts/branchwing)
+
+iOS-feel Expo flight planning app where users branch travel plans (fork
+itineraries into alternate scenarios). Frontend-only with AsyncStorage
+persistence.
+
+Mirrors the file structure of github.com/IamJasonBian/route-manager:
+
+- `services/api.ts` — UI-facing data layer. Currently sources from local
+  synthetic catalog; ready to swap in a Netlify/Amadeus proxy via
+  `EXPO_PUBLIC_API_BASE` without touching UI.
+- `services/routeService.ts` — saved routes CRUD (AsyncStorage,
+  `branchwing.savedRoutes.v1`).
+- `services/flightService.ts` — facade over `lib/flightSearch`.
+- `lib/defaultRoutes.ts` — seeded popular routes (JFK→LHR, etc.).
+- `lib/priceHistory.ts` — deterministic 90-day synthetic price series.
+
+Screens:
+
+- `/` — home + "Browse popular routes" tile + trips list.
+- `/routes` — popular routes dashboard with All/Saved filter & pull-to-refresh.
+- `/route/[od]` — route detail with summary card, segmented control
+  ("Flights today" / "Price trends"), sort chips, and detail grid.
+- Existing trip / fork / search-flights / new-trip flows untouched.
+
+Storage keys:
+
+- `branchwing.trips.v2` — trips
+- `branchwing.savedRoutes.v1` — pinned routes
+
+Run typecheck: `pnpm --filter @workspace/branchwing run typecheck`

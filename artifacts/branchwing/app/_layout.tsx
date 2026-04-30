@@ -32,6 +32,14 @@ function RootLayoutNav() {
       <Stack.Screen name="index" />
       <Stack.Screen name="trip/[id]" />
       <Stack.Screen
+        name="routes"
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="route/[od]"
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
         name="new-trip"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />

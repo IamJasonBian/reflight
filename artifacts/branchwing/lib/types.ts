@@ -31,3 +31,35 @@ export type Trip = {
   activeBranchId: string;
   createdAt: string;
 };
+
+export type RouteMeta = {
+  fromCode: string;
+  toCode: string;
+  basePrice: number;
+  popularity: number;
+};
+
+export type PricePoint = {
+  date: string;
+  price: number;
+};
+
+export type RoutePriceHistory = {
+  fromCode: string;
+  toCode: string;
+  points: PricePoint[];
+  min: number;
+  max: number;
+  avg: number;
+  current: number;
+  previous: number;
+  trend: "up" | "down" | "flat";
+  changePct: number;
+};
+
+export type SavedRoute = {
+  id: string;
+  fromCode: string;
+  toCode: string;
+  pinnedAt: string;
+};
