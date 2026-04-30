@@ -7,7 +7,6 @@
  */
 
 export * from "./branch";
-export * from "./clientIdHeaderParameter";
 export * from "./errorResponse";
 export * from "./healthStatus";
 export * from "./replaceTripsBody";

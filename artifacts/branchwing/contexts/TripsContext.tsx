@@ -9,7 +9,7 @@ import React, {
 } from "react";
 
 import { branchPalette } from "@/constants/colors";
-import { loadTrips, saveTrips } from "@/lib/storage";
+import { dropLegacyCache, loadTrips, saveTrips } from "@/lib/storage";
 import { buildSeedTrips } from "@/lib/seed";
 import { genId } from "@/lib/time";
 import type { Branch, Segment, Trip } from "@/lib/types";
@@ -47,10 +47,20 @@ type TripsContextType = {
 
 const TripsContext = createContext<TripsContextType | null>(null);
 
-export function TripsProvider({ children }: { children: React.ReactNode }) {
+export function TripsProvider({
+  userId,
+  children,
+}: {
+  userId: string | null;
+  children: React.ReactNode;
+}) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("idle");
+  // True once we've finished one round-trip with the server (or definitively
+  // failed). Until then we *do not* auto-push, so we can never overwrite real
+  // remote state with a stale local cache before we've had a chance to read it.
+  const [reconciled, setReconciled] = useState<boolean>(false);
   // Counts every user-driven mutation so the startup reconcile can detect
   // edits that happened while the remote fetch was in flight.
   const localMutationsRef = useRef<number>(0);
@@ -59,16 +69,30 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
   const pushRevRef = useRef<number>(0);
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // (Re)hydrate whenever the signed-in user changes — wipes prior user's
+  // in-memory trips immediately and re-runs the cache→server reconcile.
   useEffect(() => {
     let mounted = true;
+    setTrips([]);
+    setLoading(true);
+    setSyncStatus("idle");
+    setReconciled(false);
+    pushRevRef.current = 0;
+    localMutationsRef.current = 0;
+
+    // No active user: stay in a clean, idle state and skip cache + sync.
+    if (!userId) return;
+
     (async () => {
-      // 1. Hydrate from local cache for an instant render.
-      const stored = await loadTrips();
+      await dropLegacyCache();
+
+      // 1. Hydrate from per-user local cache for an instant render.
+      const stored = await loadTrips(userId);
       if (!mounted) return;
       if (stored.length === 0) {
         const seeded = buildSeedTrips();
         setTrips(seeded);
-        await saveTrips(seeded);
+        await saveTrips(userId, seeded);
       } else {
         setTrips(stored);
       }
@@ -82,6 +106,10 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
 
       if (remote === null) {
         setSyncStatus("offline");
+        // Mark reconciled even on offline so subsequent edits can push
+        // (best-effort) once connectivity returns. No risk of overwriting
+        // remote because remote is currently unreachable anyway.
+        setReconciled(true);
         return;
       }
 
@@ -91,21 +119,29 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
       if (remote.length > 0 && !userEditedDuringFetch) {
         // Adopt server state only if the user hasn't started editing.
         setTrips(remote);
-        await saveTrips(remote);
+        await saveTrips(userId, remote);
       }
       // In every other case the trips-effect below will debounce-push the
       // current local state up, which makes the server converge to the device.
       setSyncStatus("synced");
+      setReconciled(true);
     })();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [userId]);
 
   // Persist to local cache on every change, and debounce a remote push.
   useEffect(() => {
     if (loading) return;
-    saveTrips(trips).catch(() => {});
+    if (!userId) return;
+    saveTrips(userId, trips).catch(() => {});
+    // Don't auto-push until the initial server reconcile has completed (or
+    // failed) — otherwise a slow first GET can lose to the debounced first
+    // PUT and we'd silently overwrite real remote state with the stale local
+    // cache. User-driven edits bypass this gate (mutations > 0) because the
+    // user's intent is the new source of truth.
+    if (!reconciled && localMutationsRef.current === 0) return;
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     setSyncStatus("syncing");
     const myRev = ++pushRevRef.current;
@@ -120,7 +156,7 @@ export function TripsProvider({ children }: { children: React.ReactNode }) {
     return () => {
       if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     };
-  }, [trips, loading]);
+  }, [trips, loading, userId, reconciled]);
 
   const persist = useCallback((updater: (prev: Trip[]) => Trip[]) => {
     setTrips((prev) => {

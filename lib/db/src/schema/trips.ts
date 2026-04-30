@@ -10,7 +10,7 @@ export const tripsTable = pgTable(
   "trips",
   {
     id: text("id").notNull(),
-    clientId: text("client_id").notNull(),
+    userId: text("user_id").notNull(),
     payload: jsonb("payload").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -18,7 +18,7 @@ export const tripsTable = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => ({
-    pk: primaryKey({ columns: [t.clientId, t.id] }),
+    pk: primaryKey({ columns: [t.userId, t.id] }),
   }),
 );
 

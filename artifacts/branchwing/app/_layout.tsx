@@ -5,23 +5,30 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ClerkLoaded, ClerkProvider, useAuth } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments, type Href } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TripsProvider } from "@/contexts/TripsContext";
+import { setSyncAuthTokenGetter } from "@/services/tripsSync";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function RootLayoutNav() {
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+
+function AppStack() {
   return (
     <Stack
       screenOptions={{
@@ -55,7 +62,71 @@ function RootLayoutNav() {
         name="fork-branch"
         options={{ presentation: "modal", animation: "slide_from_bottom" }}
       />
+      <Stack.Screen
+        name="account"
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen name="sign-in" options={{ animation: "fade" }} />
+      <Stack.Screen name="sign-up" options={{ animation: "fade" }} />
     </Stack>
+  );
+}
+
+function LoadingScreen() {
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: "#0A0E27",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <ActivityIndicator color="#FF6B35" />
+    </View>
+  );
+}
+
+/**
+ * Reads Clerk auth state and:
+ * 1. Installs a token getter so tripsSync can attach Authorization headers.
+ * 2. Redirects between the auth screens and the rest of the app based on
+ *    sign-in state.
+ * 3. Mounts the per-user TripsProvider only once a userId is available.
+ */
+function AuthGate() {
+  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    setSyncAuthTokenGetter(() => getToken());
+    return () => {
+      setSyncAuthTokenGetter(null);
+    };
+  }, [getToken]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const first = segments[0];
+    const inAuthScreen = first === "sign-in" || first === "sign-up";
+    if (!isSignedIn && !inAuthScreen) {
+      router.replace("/sign-in" as Href);
+    } else if (isSignedIn && inAuthScreen) {
+      router.replace("/" as Href);
+    }
+  }, [isLoaded, isSignedIn, segments, router]);
+
+  if (!isLoaded) return <LoadingScreen />;
+
+  // TripsProvider tolerates a null userId (no-op) and stays mounted across
+  // sign-in / sign-out transitions so the Stack itself never has to be
+  // unmounted — that mount/unmount churn was painting blank screens after
+  // sign-out.
+  return (
+    <TripsProvider userId={userId ?? null}>
+      <AppStack />
+    </TripsProvider>
   );
 }
 
@@ -75,20 +146,46 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) return null;
 
+  if (!publishableKey) {
+    // Render a useful error in dev rather than a cryptic Clerk crash.
+    return (
+      <SafeAreaProvider>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "#0A0E27",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <StatusBar style="light" />
+          <ActivityIndicator color="#FF6B35" />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <TripsProvider>
-                <StatusBar style="light" />
-                <RootLayoutNav />
-              </TripsProvider>
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      tokenCache={tokenCache}
+      proxyUrl={proxyUrl}
+    >
+      <ClerkLoaded>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <StatusBar style="light" />
+                  <AuthGate />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </QueryClientProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

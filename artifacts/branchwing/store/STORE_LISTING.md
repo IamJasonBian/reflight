@@ -49,8 +49,8 @@ Native segmented controls, smooth spring sheets, haptic feedback, dark
 midnight palette, and Inter typography throughout. Designed to feel like
 something Apple would ship.
 
-PRIVACY: Branchwing stores everything on your device. No accounts, no
-servers, no tracking, no analytics, no ads.
+PRIVACY: Branchwing only collects your email so you can sign in and
+sync your trips across devices. No tracking, no analytics, no ads.
 ```
 
 ## Keywords (max 100 chars, comma-separated)
@@ -107,11 +107,24 @@ Suggested capture flow (one screenshot each):
 
 In App Store Connect → App Privacy, declare:
 
-- Data Collection: **No, we do not collect data from this app.**
-- Tracking: **No.**
-- Third-Party SDKs: none collecting user data.
+**Data Linked to You:**
+- **Contact Info → Email Address** — used for App Functionality
+  (account authentication and password recovery). Linked to user.
+  Not used for tracking.
+- **User Content → Other User Content** (your trips/itineraries) —
+  used for App Functionality (sync across the user's own devices).
+  Linked to user. Not used for tracking.
 
-(All Branchwing data lives in on-device AsyncStorage / localStorage.)
+**Tracking:** No. Branchwing does not track users across apps or
+websites owned by other companies.
+
+**Third-Party SDKs:**
+- Clerk (`@clerk/expo`) — handles authentication. Receives the user's
+  email address and password (hashed). Disclosed under the email-address
+  data type above.
+
+(Trip data is also cached on-device via AsyncStorage / localStorage for
+instant offline access.)
 
 ## Encryption
 

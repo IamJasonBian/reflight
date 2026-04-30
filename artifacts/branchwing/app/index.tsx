@@ -80,22 +80,39 @@ export default function HomeScreen() {
             Branchwing
           </Text>
         </View>
-        <Pressable
-          onPress={() => {
-            if (Platform.OS !== "web") {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
-                () => {},
-              );
-            }
-            router.push("/new-trip");
-          }}
-          style={({ pressed }) => [
-            styles.newBtn,
-            { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
-          ]}
-        >
-          <Feather name="plus" size={18} color="#fff" />
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Pressable
+            onPress={() => router.push("/account")}
+            accessibilityLabel="Account"
+            style={({ pressed }) => [
+              styles.newBtn,
+              {
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Feather name="user" size={16} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
+                  () => {},
+                );
+              }
+              router.push("/new-trip");
+            }}
+            style={({ pressed }) => [
+              styles.newBtn,
+              { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+            ]}
+          >
+            <Feather name="plus" size={18} color="#fff" />
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (

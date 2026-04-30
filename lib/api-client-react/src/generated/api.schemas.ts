@@ -50,11 +50,6 @@ export interface Trip {
   createdAt: string;
 }
 
-/**
- * Stable per-device identifier that scopes the trip data.
- */
-export type ClientIdHeaderParameter = string;
-
 export type ReplaceTripsBody = {
   trips: Trip[];
 };

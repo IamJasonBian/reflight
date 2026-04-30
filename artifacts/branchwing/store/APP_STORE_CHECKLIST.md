@@ -77,7 +77,13 @@ While EAS is building:
 - [ ] Primary language: English (U.S.)
 - [ ] Paste fields from `store/STORE_LISTING.md`
 - [ ] Upload screenshots (see required sizes in STORE_LISTING.md)
-- [ ] Fill out App Privacy → "We do not collect data from this app"
+- [ ] Fill out App Privacy:
+      - **Contact Info → Email Address**: collected, linked to user,
+        used for App Functionality. Not used for tracking.
+      - **User Content → Other User Content** (trips/branches/segments):
+        collected, linked to user, used for App Functionality. Not
+        used for tracking.
+      - **Third‑party SDKs**: list **Clerk** (authentication).
 - [ ] Set pricing → Free
 - [ ] Add the app icon (1024×1024 — already in `assets/images/icon.png`)
 
@@ -95,8 +101,11 @@ When TestFlight feels good:
 
 - [ ] App Store Connect → your app → "+ Version" → 1.0
 - [ ] Select the TestFlight build you uploaded
-- [ ] Add review notes: "No login required. Browse Routes from the
-      home tile to see the popular routes feature."
+- [ ] Add review notes: "Test account: please use 'Sign Up' with any
+      email + password to create your own account; verification code is
+      delivered by email via Clerk. Trips are scoped to your account
+      and synced across devices. Account deletion is available in‑app
+      via the user icon on the home screen → Delete account."
 - [ ] Submit for Review
 
 Apple typically reviews within 24–48 hours.
@@ -109,11 +118,17 @@ Apple typically reviews within 24–48 hours.
 |                                   | engine. Disclosed in description.             |
 | Permissions never prompted        | Usage strings in `Info.plist` are accurate    |
 |                                   | and only fire if user opts into the feature.  |
-| App Privacy form                  | Truly nothing collected — straightforward.    |
+| App Privacy form                  | Email + trip content disclosed; both linked   |
+|                                   | to user; both used for App Functionality only.|
 | iOS 17+ Privacy Manifest          | `NSPrivacyAccessedAPITypes` declared in       |
 |                                   | `app.json` for AsyncStorage etc.              |
 | Encryption export compliance      | `ITSAppUsesNonExemptEncryption: false` set.   |
-| Account deletion (Guideline 5.1.1)| No accounts exist; nothing to delete.         |
+| Account deletion (Guideline 5.1.1(v))| In‑app: home screen → user icon → Delete   |
+|                                   | account. Purges trips on the server and the   |
+|                                   | Clerk user record. No email round‑trip needed.|
+| Sign in with Apple (Guideline 4.8)| Not required — Branchwing offers only        |
+|                                   | first‑party email + password sign‑in via      |
+|                                   | Clerk. No third‑party social login is shown.  |
 
 ## What still needs your decision
 

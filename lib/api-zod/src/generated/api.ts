@@ -16,17 +16,9 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Returns all trips that belong to the given client device.
- * @summary List trips for a client
+ * Returns all trips that belong to the authenticated user.
+ * @summary List trips for the signed-in user
  */
-
-export const ListTripsHeader = zod.object({
-  "X-Client-Id": zod
-    .string()
-    .min(1)
-    .describe("Stable per-device identifier that scopes the trip data."),
-});
-
 export const ListTripsResponseItem = zod.object({
   id: zod.string(),
   title: zod.string(),
@@ -63,17 +55,9 @@ export const ListTripsResponseItem = zod.object({
 export const ListTripsResponse = zod.array(ListTripsResponseItem);
 
 /**
- * Bulk-upserts the full list of trips for the given client device. Any trips previously stored for this client that are not in the body are deleted. This makes the endpoint idempotent and easy to call after every local change.
- * @summary Replace all trips for a client
+ * Bulk-upserts the full list of trips for the authenticated user. Any trips previously stored for this user that are not in the body are deleted. This makes the endpoint idempotent and easy to call after every local change.
+ * @summary Replace all trips for the signed-in user
  */
-
-export const ReplaceTripsHeader = zod.object({
-  "X-Client-Id": zod
-    .string()
-    .min(1)
-    .describe("Stable per-device identifier that scopes the trip data."),
-});
-
 export const ReplaceTripsBody = zod.object({
   trips: zod.array(
     zod.object({

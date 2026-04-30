@@ -109,8 +109,8 @@ export function useHealthCheck<
 }
 
 /**
- * Returns all trips that belong to the given client device.
- * @summary List trips for a client
+ * Returns all trips that belong to the authenticated user.
+ * @summary List trips for the signed-in user
  */
 export const getListTripsUrl = () => {
   return `/api/trips`;
@@ -155,7 +155,7 @@ export type ListTripsQueryResult = NonNullable<
 export type ListTripsQueryError = ErrorType<ErrorResponse>;
 
 /**
- * @summary List trips for a client
+ * @summary List trips for the signed-in user
  */
 
 export function useListTrips<
@@ -175,8 +175,8 @@ export function useListTrips<
 }
 
 /**
- * Bulk-upserts the full list of trips for the given client device. Any trips previously stored for this client that are not in the body are deleted. This makes the endpoint idempotent and easy to call after every local change.
- * @summary Replace all trips for a client
+ * Bulk-upserts the full list of trips for the authenticated user. Any trips previously stored for this user that are not in the body are deleted. This makes the endpoint idempotent and easy to call after every local change.
+ * @summary Replace all trips for the signed-in user
  */
 export const getReplaceTripsUrl = () => {
   return `/api/trips`;
@@ -239,7 +239,7 @@ export type ReplaceTripsMutationBody = BodyType<ReplaceTripsBody>;
 export type ReplaceTripsMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Replace all trips for a client
+ * @summary Replace all trips for the signed-in user
  */
 export const useReplaceTrips = <
   TError = ErrorType<ErrorResponse>,

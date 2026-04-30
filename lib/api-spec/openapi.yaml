@@ -30,10 +30,10 @@ paths:
     get:
       operationId: listTrips
       tags: [trips]
-      summary: List trips for a client
-      description: Returns all trips that belong to the given client device.
-      parameters:
-        - $ref: "#/components/parameters/ClientIdHeader"
+      summary: List trips for the signed-in user
+      description: Returns all trips that belong to the authenticated user.
+      security:
+        - clerkBearer: []
       responses:
         "200":
           description: List of trips
@@ -43,8 +43,8 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Trip"
-        "400":
-          description: Missing or invalid client id
+        "401":
+          description: Missing or invalid auth token
           content:
             application/json:
               schema:
@@ -52,14 +52,14 @@ paths:
     put:
       operationId: replaceTrips
       tags: [trips]
-      summary: Replace all trips for a client
+      summary: Replace all trips for the signed-in user
       description: >-
-        Bulk-upserts the full list of trips for the given client device.
-        Any trips previously stored for this client that are not in the body
+        Bulk-upserts the full list of trips for the authenticated user.
+        Any trips previously stored for this user that are not in the body
         are deleted. This makes the endpoint idempotent and easy to call after
         every local change.
-      parameters:
-        - $ref: "#/components/parameters/ClientIdHeader"
+      security:
+        - clerkBearer: []
       requestBody:
         required: true
         content:
@@ -87,16 +87,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid auth token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
-  parameters:
-    ClientIdHeader:
-      in: header
-      name: X-Client-Id
-      required: true
-      description: Stable per-device identifier that scopes the trip data.
-      schema:
-        type: string
-        minLength: 1
+  securitySchemes:
+    clerkBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Clerk-issued session JWT obtained via getToken() in the mobile client.
   schemas:
     HealthStatus:
       type: object

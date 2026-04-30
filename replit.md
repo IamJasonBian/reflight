@@ -59,20 +59,39 @@ Storage keys:
 
 Trip persistence:
 
-- `services/tripsSync.ts` wraps `GET /api/trips` and `PUT /api/trips`. The
-  base URL is `EXPO_PUBLIC_API_BASE_URL` if set, else
-  `https://$EXPO_PUBLIC_DOMAIN/api`, else `/api`.
-- `contexts/TripsContext.tsx` hydrates from AsyncStorage immediately, then
-  reconciles with the server in the background. If the user mutates trips
-  while the remote fetch is in flight, the local edits win. Every change
-  triggers a 600ms-debounced PUT with a monotonic revision counter so
-  out-of-order responses can't desync the badge.
+- `services/tripsSync.ts` wraps `GET / PUT / DELETE /api/trips` with a Clerk
+  `Authorization: Bearer <jwt>` header. `authedHeadersAwait` retries the
+  token getter (8×250ms) so cold-start fetches don't silently 401 before
+  Clerk's session has hydrated. The base URL is `EXPO_PUBLIC_API_BASE_URL`
+  if set, else `https://$EXPO_PUBLIC_DOMAIN/api`, else `/api`.
+- `contexts/TripsContext.tsx` hydrates from a per-userId AsyncStorage cache
+  immediately, then reconciles with the server in the background. The
+  auto-push effect is gated by a `reconciled` flag and `localMutationsRef`:
+  no PUT fires until the first GET has returned (or definitively failed),
+  unless the user has already started editing — that guarantees a slow
+  cold-start GET can never lose to the debounced first PUT and overwrite
+  real remote state with a stale local cache. Every change triggers a
+  600ms-debounced PUT with a monotonic revision counter so out-of-order
+  responses can't desync the badge.
 - Server (`artifacts/api-server/src/routes/trips.ts`) is bulk-replace per
-  client: `DELETE WHERE client_id = ?` then `INSERT` inside a transaction.
+  Clerk userId: `requireAuth` middleware → `DELETE WHERE user_id = ?` then
+  `INSERT` inside a transaction. Routes are GET / PUT / DELETE.
 - DB schema (`lib/db/src/schema/trips.ts`): composite primary key
-  `(client_id, id)` so trip IDs only need to be unique per device.
-- Per-device `X-Client-Id` is the only access control today (MVP). Reinstall
-  on a fresh device gets a new id and starts empty — cross-device handoff
-  needs an account/linking flow which is out of scope.
+  `(user_id, id)` so trip IDs only need to be unique per user.
+- Auth: `@clerk/expo` (email + password only — avoids Apple Guideline 4.8).
+  Trips follow the Clerk userId across devices.
+
+Account deletion (Apple Guideline 5.1.1(v)):
+
+- `app/account.tsx` has Sign Out and Delete Account. Delete is transactional
+  from the user's POV: `purgeRemoteTrips()` (server `DELETE /api/trips`,
+  must succeed) → `dropUserCache(userId)` → `user.delete()` (wrapped in
+  `useReverification` with a custom in-app "Confirm your password" modal
+  that calls `session.startVerification({level:"first_factor"})` then
+  `session.attemptFirstFactorVerification({strategy:"password",password})`)
+  → `signOut()` so the AuthGate redirects to `/sign-in`.
+- If the server purge fails, deletion aborts before the Clerk record is
+  touched (no orphaned data). If `user.delete()` fails after the purge
+  succeeds, the user sees a specific message asking them to try again.
 
 Run typecheck: `pnpm --filter @workspace/branchwing run typecheck`

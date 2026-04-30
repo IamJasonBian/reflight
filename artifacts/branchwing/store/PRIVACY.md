@@ -2,28 +2,51 @@
 
 _Last updated: April 30, 2026_
 
-Branchwing is built to be private by default.
+Branchwing collects only what we need to keep your trips synced across
+your devices. We do not run advertising, behavioral profiling, or
+third‑party trackers.
 
 ## Data we collect
 
-**None.** Branchwing does not collect, transmit, or store any personal
-information on any server. Everything you create — trips, branches,
-saved routes — is saved only on your device using the operating system's
-standard local storage.
+- **Email address.** Required to create a Branchwing account and to sign
+  you in. We use it only for authentication and account‑recovery email
+  ("verify your address", "reset your password"). Authentication is
+  handled by our identity provider, Clerk.
+- **Trip data.** The itineraries, branches, and segments you create in
+  the app are stored on your device and synced to Branchwing's secure
+  servers so that they appear on your other signed‑in devices. Trip
+  data is scoped to your account and is not shared with other users.
+
+We do not collect contacts, location history, browsing history,
+advertising identifiers, or any device sensor data beyond what is
+described under "Permissions" below.
 
 ## Data we share
 
-**None.** Branchwing has no analytics, no advertising SDKs, no crash
-reporters, and no tracking of any kind.
+We do not sell or rent your personal information.
+
+We share data only with the following service providers, strictly to
+operate the app:
+
+- **Clerk** (identity provider) — receives your email address and
+  password (hashed by Clerk) for the sole purpose of authenticating
+  your sign‑in attempts.
+- **Our hosting provider** — stores your trip data on our backend so
+  it can be synced between devices.
 
 ## Network usage
 
-The current version of Branchwing operates entirely offline. Flight and
-price data is generated locally on your device from a synthetic catalog.
+Branchwing connects to:
 
-If a future version connects to a flight pricing API, this policy will
-be updated and the network destinations will be disclosed here before
-that version ships.
+- Clerk (`*.clerk.accounts.dev`, `*.clerk.com`) — sign‑in, sign‑up, and
+  session refresh.
+- The Branchwing backend — to load and save your trips.
+
+Flight prices and route metadata in the current version are generated
+locally on your device from a synthetic catalog, and do not result in
+network calls to third‑party flight APIs. If a future version connects
+to a real flight pricing API, this policy will be updated and the new
+network destinations will be disclosed here before that version ships.
 
 ## Permissions
 
@@ -36,12 +59,28 @@ core branching and routing features:
 - **Photo Library** — only if you choose to attach a trip photo.
 - **Camera** — only if you choose to take a trip photo.
 
-If granted, the data never leaves your device.
+If granted, the data from these sources stays on your device.
+
+## Account deletion
+
+You can delete your Branchwing account from inside the app at any time:
+open the user icon on the home screen, tap **Delete account**, and
+confirm. This immediately and permanently:
+
+1. Deletes every trip, branch, and segment we store for your account
+   from the Branchwing backend.
+2. Deletes your account record (including your email address) from
+   Clerk.
+3. Clears the on‑device cache of your trips.
+
+This action cannot be undone. If you would prefer to make the request
+by email, you can also write to `support@branchwing.app` from the
+address tied to your account.
 
 ## Children
 
-Branchwing does not knowingly collect any data from anyone, including
-children under 13.
+Branchwing is not directed at children under 13 and we do not knowingly
+collect data from children under 13.
 
 ## Contact
 
