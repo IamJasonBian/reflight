@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { clerkClient } from "@clerk/express";
 import { db, userProfilesTable } from "@workspace/db";
 import { GetMyProfileResponse } from "@workspace/api-zod";
 import { ensureUserProfile } from "../lib/userProfile";
+import { fetchPrimaryEmail } from "../lib/clerkEmail";
 import { requireAuth, type AuthedRequest } from "../lib/requireAuth";
 
 const router: IRouter = Router();
@@ -52,18 +52,5 @@ router.get("/me/profile", requireAuth, async (req, res): Promise<void> => {
     res.status(503).json({ error: "Profile not yet available, please retry." });
   }
 });
-
-async function fetchPrimaryEmail(userId: string): Promise<string> {
-  const user = await clerkClient.users.getUser(userId);
-  const primary = user.emailAddresses.find(
-    (e) => e.id === user.primaryEmailAddressId,
-  );
-  const email =
-    primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
-  if (!email) {
-    throw new Error(`Clerk user ${userId} has no email address`);
-  }
-  return email;
-}
 
 export default router;

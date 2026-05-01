@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { clerkClient } from "@clerk/express";
 import { db, tripsTable } from "@workspace/db";
 import {
   ListTripsResponse,
@@ -9,6 +8,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth, type AuthedRequest } from "../lib/requireAuth";
 import { ensureUserProfile } from "../lib/userProfile";
+import { fetchPrimaryEmail } from "../lib/clerkEmail";
 
 const router: IRouter = Router();
 
@@ -83,19 +83,6 @@ router.put("/trips", requireAuth, async (req, res): Promise<void> => {
   const data = ReplaceTripsResponse.parse(trips);
   res.json(data);
 });
-
-async function fetchPrimaryEmail(userId: string): Promise<string> {
-  const user = await clerkClient.users.getUser(userId);
-  const primary = user.emailAddresses.find(
-    (e) => e.id === user.primaryEmailAddressId,
-  );
-  const email =
-    primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
-  if (!email) {
-    throw new Error(`Clerk user ${userId} has no email address`);
-  }
-  return email;
-}
 
 // Hard-delete all trips for this Clerk user (called from the in-app
 // account-deletion flow; App Store Guideline 5.1.1(v)).
