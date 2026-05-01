@@ -20,7 +20,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { dropUserCache } from "@/lib/storage";
 import { purgeRemoteTrips } from "@/services/tripsSync";
-import { fetchMyProfile, type MyProfile } from "@/services/discoverApi";
+import {
+  clearCachedMyProfile,
+  fetchMyProfile,
+  loadCachedMyProfile,
+  type MyProfile,
+} from "@/services/discoverApi";
 
 type ReverifyState = {
   resolve: () => void;
@@ -102,7 +107,8 @@ export default function AccountScreen() {
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
-  // Public profile (handle) shown in Discover; re-fetched per signed-in user.
+  // Public profile (handle) shown in Discover. Seed from the durable cache
+  // so the handle renders instantly on launch (or offline), then refresh.
   const [profile, setProfile] = React.useState<MyProfile | null>(null);
   React.useEffect(() => {
     let cancelled = false;
@@ -110,8 +116,11 @@ export default function AccountScreen() {
       setProfile(null);
       return;
     }
+    loadCachedMyProfile().then((cached) => {
+      if (!cancelled && cached) setProfile(cached);
+    });
     fetchMyProfile().then((p) => {
-      if (!cancelled) setProfile(p);
+      if (!cancelled && p) setProfile(p);
     });
     return () => {
       cancelled = true;
@@ -149,6 +158,7 @@ export default function AccountScreen() {
       "Sign out",
       () => {
         setBusy("signout");
+        clearCachedMyProfile().catch(() => {});
         signOut().catch(() => setBusy(null));
       },
     );
@@ -173,6 +183,7 @@ export default function AccountScreen() {
               );
             }
             if (user?.id) await dropUserCache(user.id);
+            await clearCachedMyProfile().catch(() => {});
             try {
               await deleteUser();
             } catch (err) {

@@ -1,7 +1,11 @@
 // Discover/public API helpers. Endpoints are unauthenticated but we attach
 // the Bearer token when present so future personalized feeds have a hook.
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import type { Trip } from "@/lib/types";
 import { API_BASE } from "@/services/tripsSync";
+
+const PROFILE_CACHE_KEY = "branchwing.myProfile.v1";
 
 export type PublicAuthor = { handle: string };
 export type DiscoverItem = {
@@ -42,10 +46,34 @@ export async function fetchMyProfile(): Promise<MyProfile | null> {
     if (!headers.Authorization) return null;
     const res = await fetch(`${API_BASE}/me/profile`, { headers });
     if (!res.ok) return null;
-    return (await res.json()) as MyProfile;
+    const profile = (await res.json()) as MyProfile;
+    try {
+      await AsyncStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+    } catch {}
+    return profile;
   } catch {
     return null;
   }
+}
+
+export async function loadCachedMyProfile(): Promise<MyProfile | null> {
+  try {
+    const raw = await AsyncStorage.getItem(PROFILE_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<MyProfile>;
+    if (typeof parsed.handle === "string" && typeof parsed.createdAt === "string") {
+      return { handle: parsed.handle, createdAt: parsed.createdAt };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearCachedMyProfile(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PROFILE_CACHE_KEY);
+  } catch {}
 }
 
 export async function fetchDiscoverFeed(opts?: {

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, ne, or, sql } from "drizzle-orm";
 import { db, tripsTable, userProfilesTable } from "@workspace/db";
 import {
   DiscoverTripsQueryParams,
@@ -9,6 +9,7 @@ import {
   GetPublicTripParams,
   GetPublicTripResponse,
 } from "@workspace/api-zod";
+import { getOptionalUserId } from "../lib/requireAuth";
 
 const router: IRouter = Router();
 
@@ -45,6 +46,7 @@ router.get("/discover/trips", async (req, res): Promise<void> => {
   const { cursor, limit: rawLimit } = queryParse.data;
   const limit = Math.min(rawLimit ?? DEFAULT_LIMIT, MAX_LIMIT);
   const after = parseCursor(cursor);
+  const viewerId = getOptionalUserId(req);
 
   // Truncate updatedAt to ms so the cursor (which round-trips through a JS
   // Date) and the ORDER BY use the exact same key — otherwise sub-ms
@@ -52,6 +54,9 @@ router.get("/discover/trips", async (req, res): Promise<void> => {
   const updatedAtMs = sql`date_trunc('milliseconds', ${tripsTable.updatedAt})`;
 
   const baseConds = [eq(tripsTable.isPublic, true)];
+  if (viewerId) {
+    baseConds.push(ne(tripsTable.userId, viewerId));
+  }
   if (after) {
     baseConds.push(
       or(
