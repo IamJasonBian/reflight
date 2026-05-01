@@ -95,3 +95,56 @@ Account deletion (Apple Guideline 5.1.1(v)):
   succeeds, the user sees a specific message asking them to try again.
 
 Run typecheck: `pnpm --filter @workspace/branchwing run typecheck`
+
+Discover (public trips, Task #2):
+
+- Schema additions in a single hand-written additive migration
+  `lib/db/drizzle/0000_init_public_discover.sql` with `IF NOT EXISTS`
+  guards: `trips.is_public` bool default false (with backfill to false
+  for pre-existing rows), composite index `trips_public_feed_idx
+  (is_public, updated_at)`, and the `user_profiles` table keyed by
+  `clerk_user_id` with case-insensitive uniqueness via
+  `uniqueIndex("user_profiles_handle_lower_unique").on(sql\`lower(handle)\`)`.
+  Verified idempotent on a simulated legacy DB; live row-count diff
+  showed all pre-existing trips backfilled to `is_public=false`.
+- Endpoints (`artifacts/api-server/src/routes/discover.ts`,
+  `routes/profile.ts`): `GET /api/discover/trips` (public feed with
+  cursor `<isoMs>|<id>` paginating on `date_trunc('milliseconds',
+  updated_at)`; auth-aware — signed-in viewers see all public trips
+  except their own), `GET /api/discover/trips/:id` (404 for
+  missing-or-private to prevent existence probing), `GET
+  /api/users/:handle` (case-insensitive, profile + their public
+  trips), `GET /api/me/profile` (get-or-create using
+  `lib/clerkEmail.ts::fetchPrimaryEmail` which requires a verified
+  primary email and otherwise surfaces 503).
+- Handle derivation (`lib/handle.ts`): lowercase email local-part,
+  drop `+tag` and dots, keep `[a-z0-9_]`, clamp to 20 chars; if too
+  short, fall back to `user_<first 8 hex of sha256(clerkUserId)>` so
+  no raw fragment of the Clerk id is leaked.
+- Collision resolution (`lib/userProfile.ts::ensureUserProfile`): try
+  the bare handle, then numeric suffixes `base2..base99`, then 8
+  progressively-longer sha256-derived suffixes seeded by
+  `clerkUserId`. ACCEPTED drift from the literal "unbounded numeric"
+  spec wording — the deterministic hash tail guarantees termination
+  while still preferring readable numeric suffixes for the realistic
+  collision range. Race-safe via `INSERT ... RETURNING` + 23505
+  re-read.
+- Client cache: `services/discoverApi.ts` persists `myProfile` under
+  `branchwing.myProfile.v1` in AsyncStorage. The account screen seeds
+  from `loadCachedMyProfile()` for instant offline render and the
+  AuthGate bootstrap calls `fetchMyProfile()` once per signed-in
+  identity (with one 5s retry on null). Sign-out and account-delete
+  call `clearCachedMyProfile()`.
+- UI: Discover entered via the home-screen header compass icon (not a
+  bottom tab — the app keeps its single-tab nav); `app/discover.tsx`
+  list, `app/users/[handle].tsx` profile, `app/public-trips/[id].tsx`
+  read-only trip viewer (no FAB, no New-Branch chip, no delete, no
+  privacy toggle); `components/PublicTripCard.tsx` card with separate
+  Pressables for the @handle pill and body, and an "updated <relative>"
+  line via `lib/time.ts::fmtRelative`.
+- Privacy regression: `pnpm --filter @workspace/scripts run
+  test:discover-privacy` inserts a public + private trip and a profile,
+  then asserts via the shared proxy that `/discover/trips/:id` is 404
+  for private, the discover feed and `/users/:handle` exclude private
+  trips, and case-insensitive handle lookup works. All 8 assertions
+  pass against the live API.
