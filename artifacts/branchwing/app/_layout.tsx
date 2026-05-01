@@ -20,6 +20,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TripsProvider } from "@/contexts/TripsContext";
 import { setSyncAuthTokenGetter } from "@/services/tripsSync";
+import { setDiscoverAuthTokenGetter } from "@/services/discoverApi";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -66,6 +67,14 @@ function AppStack() {
         name="account"
         options={{ animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="discover"
+        options={{ animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="users/[handle]"
+        options={{ animation: "slide_from_right" }}
+      />
       <Stack.Screen name="sign-in" options={{ animation: "fade" }} />
       <Stack.Screen name="sign-up" options={{ animation: "fade" }} />
     </Stack>
@@ -101,8 +110,10 @@ function AuthGate() {
 
   useEffect(() => {
     setSyncAuthTokenGetter(() => getToken());
+    setDiscoverAuthTokenGetter(() => getToken());
     return () => {
       setSyncAuthTokenGetter(null);
+      setDiscoverAuthTokenGetter(null);
     };
   }, [getToken]);
 

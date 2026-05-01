@@ -48,8 +48,51 @@ export interface Trip {
   branches: Branch[];
   activeBranchId: string;
   createdAt: string;
+  /** When true, this trip is visible in the public Discover feed. */
+  isPublic?: boolean;
+}
+
+export interface UserProfile {
+  /** Public handle, derived from the user's email local part. */
+  handle: string;
+  createdAt: string;
+}
+
+export interface PublicAuthor {
+  handle: string;
+}
+
+export interface DiscoverItem {
+  trip: Trip;
+  author: PublicAuthor;
+  /** Server timestamp of the last update to this trip. */
+  updatedAt: string;
+}
+
+export interface DiscoverFeed {
+  items: DiscoverItem[];
+  /** @nullable */
+  nextCursor?: string | null;
+}
+
+export interface PublicProfilePage {
+  profile: UserProfile;
+  trips: DiscoverItem[];
 }
 
 export type ReplaceTripsBody = {
   trips: Trip[];
+};
+
+export type DiscoverTripsParams = {
+  /**
+   * Opaque cursor returned by a previous response
+   */
+  cursor?: string;
+  /**
+   * Page size (default 20, max 50)
+   * @minimum 1
+   * @maximum 50
+   */
+  limit?: number;
 };

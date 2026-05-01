@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { dropUserCache } from "@/lib/storage";
 import { purgeRemoteTrips } from "@/services/tripsSync";
+import { fetchMyProfile, type MyProfile } from "@/services/discoverApi";
 
 type ReverifyState = {
   resolve: () => void;
@@ -103,6 +104,25 @@ export default function AccountScreen() {
   }, [reverify]);
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
+
+  // Pull (or lazily create) the public profile so the user can see their
+  // handle exactly as it shows up in Discover. We re-fetch whenever the
+  // signed-in user changes so a sign-out + sign-in cycle doesn't leak the
+  // previous user's handle into the next session.
+  const [profile, setProfile] = React.useState<MyProfile | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setProfile(null);
+      return;
+    }
+    fetchMyProfile().then((p) => {
+      if (!cancelled) setProfile(p);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
 
   const confirm = React.useCallback(
     (
@@ -240,6 +260,29 @@ export default function AccountScreen() {
           </Text>
           <Text style={[styles.email, { color: colors.foreground }]}>
             {userEmail || "—"}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.label, { color: colors.mutedForeground }]}>
+            Your public handle
+          </Text>
+          <Text style={[styles.email, { color: colors.foreground }]}>
+            {profile ? `@${profile.handle}` : "—"}
+          </Text>
+          <Text
+            style={[
+              styles.helper,
+              { color: colors.mutedForeground, paddingHorizontal: 0, marginTop: 4 },
+            ]}
+          >
+            We picked this from your email. It only appears next to trips you
+            choose to make public from the trip page.
           </Text>
         </View>
 

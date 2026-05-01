@@ -7,8 +7,14 @@
  */
 
 export * from "./branch";
+export * from "./discoverFeed";
+export * from "./discoverItem";
+export * from "./discoverTripsParams";
 export * from "./errorResponse";
 export * from "./healthStatus";
+export * from "./publicAuthor";
+export * from "./publicProfilePage";
 export * from "./replaceTripsBody";
 export * from "./segment";
 export * from "./trip";
+export * from "./userProfile";

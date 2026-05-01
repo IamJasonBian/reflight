@@ -82,6 +82,21 @@ export default function HomeScreen() {
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
+            onPress={() => router.push("/discover")}
+            accessibilityLabel="Discover"
+            style={({ pressed }) => [
+              styles.newBtn,
+              {
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Feather name="compass" size={16} color={colors.mutedForeground} />
+          </Pressable>
+          <Pressable
             onPress={() => router.push("/account")}
             accessibilityLabel="Account"
             style={({ pressed }) => [

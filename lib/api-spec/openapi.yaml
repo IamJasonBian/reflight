@@ -12,6 +12,10 @@ tags:
     description: Health operations
   - name: trips
     description: Trip persistence and sync
+  - name: profile
+    description: Public profile (handle) for the signed-in user
+  - name: discover
+    description: Public Discover feed and public profile lookups
 paths:
   /healthz:
     get:
@@ -89,6 +93,94 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           description: Missing or invalid auth token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /me/profile:
+    get:
+      operationId: getMyProfile
+      tags: [profile]
+      summary: Get-or-create the signed-in user's public profile
+      description: >-
+        Returns the public profile for the authenticated user. If no profile
+        exists yet, one is created on the fly with a handle derived from the
+        user's primary email (everything to the left of `@`, lowercased,
+        stripped of dots and `+tag`s, and with a numeric suffix if the
+        derived handle is already taken). The handle is durable: it is set
+        once at first call and not auto-rewritten if the user later changes
+        their email.
+      security:
+        - clerkBearer: []
+      responses:
+        "200":
+          description: My public profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Missing or invalid auth token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /discover/trips:
+    get:
+      operationId: discoverTrips
+      tags: [discover]
+      summary: Public Discover feed of trips
+      description: >-
+        Cursor-paginated list of all trips that have been marked public,
+        ordered newest-updated first. Open endpoint — no authentication
+        required. Each item carries the trip and the author's public handle.
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Opaque cursor returned by a previous response
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+          description: Page size (default 20, max 50)
+      responses:
+        "200":
+          description: Discover feed page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverFeed"
+  /users/{handle}:
+    get:
+      operationId: getPublicProfile
+      tags: [discover]
+      summary: Get a user's public profile and trips
+      description: >-
+        Returns the public profile and every public trip for the user with
+        the given handle. Handle lookup is case-insensitive. Returns 404 if
+        no user with this handle exists. Open endpoint — no authentication
+        required.
+      parameters:
+        - name: handle
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public profile and trips
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicProfilePage"
+        "404":
+          description: No user with that handle
           content:
             application/json:
               schema:
@@ -204,3 +296,52 @@ components:
           type: string
         createdAt:
           type: string
+        isPublic:
+          type: boolean
+          description: When true, this trip is visible in the public Discover feed.
+    UserProfile:
+      type: object
+      required: [handle, createdAt]
+      properties:
+        handle:
+          type: string
+          description: Public handle, derived from the user's email local part.
+        createdAt:
+          type: string
+    PublicAuthor:
+      type: object
+      required: [handle]
+      properties:
+        handle:
+          type: string
+    DiscoverItem:
+      type: object
+      required: [trip, author, updatedAt]
+      properties:
+        trip:
+          $ref: "#/components/schemas/Trip"
+        author:
+          $ref: "#/components/schemas/PublicAuthor"
+        updatedAt:
+          type: string
+          description: Server timestamp of the last update to this trip.
+    DiscoverFeed:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoverItem"
+        nextCursor:
+          type: ["string", "null"]
+    PublicProfilePage:
+      type: object
+      required: [profile, trips]
+      properties:
+        profile:
+          $ref: "#/components/schemas/UserProfile"
+        trips:
+          type: array
+          items:
+            $ref: "#/components/schemas/DiscoverItem"

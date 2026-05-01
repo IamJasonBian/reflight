@@ -42,6 +42,7 @@ export default function TripScreen() {
     setActiveBranch,
     deleteTrip,
     deleteBranch,
+    setTripPublic,
   } = useTrips();
   const [view, setView] = useState<ViewMode>("spine");
 
@@ -248,6 +249,66 @@ export default function TripScreen() {
             />
           )}
         </View>
+
+        <Pressable
+          onPress={() => {
+            if (Platform.OS !== "web") {
+              Haptics.selectionAsync().catch(() => {});
+            }
+            setTripPublic(trip.id, !(trip.isPublic === true));
+          }}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: trip.isPublic === true }}
+          accessibilityLabel={
+            trip.isPublic ? "Make trip private" : "Make trip public"
+          }
+          style={({ pressed }) => [
+            styles.publicRow,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}
+        >
+          <Feather
+            name={trip.isPublic ? "globe" : "lock"}
+            size={16}
+            color={trip.isPublic ? colors.primary : colors.mutedForeground}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.publicTitle, { color: colors.foreground }]}>
+              {trip.isPublic ? "Public" : "Private"}
+            </Text>
+            <Text
+              style={[styles.publicSub, { color: colors.mutedForeground }]}
+            >
+              {trip.isPublic
+                ? "Visible in Discover and on your public profile."
+                : "Only you can see this trip."}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.switch,
+              {
+                backgroundColor: trip.isPublic
+                  ? colors.primary
+                  : colors.muted,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.switchKnob,
+                {
+                  backgroundColor: "#fff",
+                  alignSelf: trip.isPublic ? "flex-end" : "flex-start",
+                },
+              ]}
+            />
+          </View>
+        </Pressable>
       </View>
 
       <View
@@ -448,6 +509,37 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+  },
+  publicRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  publicTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  publicSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  switch: {
+    width: 38,
+    height: 22,
+    borderRadius: 11,
+    padding: 2,
+    justifyContent: "center",
+  },
+  switchKnob: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
   },
   divider: {
     height: 1,

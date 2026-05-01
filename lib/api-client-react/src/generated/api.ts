@@ -17,10 +17,14 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  DiscoverFeed,
+  DiscoverTripsParams,
   ErrorResponse,
   HealthStatus,
+  PublicProfilePage,
   ReplaceTripsBody,
   Trip,
+  UserProfile,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -260,3 +264,263 @@ export const useReplaceTrips = <
 > => {
   return useMutation(getReplaceTripsMutationOptions(options));
 };
+
+/**
+ * Returns the public profile for the authenticated user. If no profile exists yet, one is created on the fly with a handle derived from the user's primary email (everything to the left of `@`, lowercased, stripped of dots and `+tag`s, and with a numeric suffix if the derived handle is already taken). The handle is durable: it is set once at first call and not auto-rewritten if the user later changes their email.
+ * @summary Get-or-create the signed-in user's public profile
+ */
+export const getGetMyProfileUrl = () => {
+  return `/api/me/profile`;
+};
+
+export const getMyProfile = async (
+  options?: RequestInit,
+): Promise<UserProfile> => {
+  return customFetch<UserProfile>(getGetMyProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyProfileQueryKey = () => {
+  return [`/api/me/profile`] as const;
+};
+
+export const getGetMyProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyProfile>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyProfile>>> = ({
+    signal,
+  }) => getMyProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMyProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMyProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMyProfile>>
+>;
+export type GetMyProfileQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get-or-create the signed-in user's public profile
+ */
+
+export function useGetMyProfile<
+  TData = Awaited<ReturnType<typeof getMyProfile>>,
+  TError = ErrorType<ErrorResponse>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getMyProfile>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMyProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Cursor-paginated list of all trips that have been marked public, ordered newest-updated first. Open endpoint — no authentication required. Each item carries the trip and the author's public handle.
+ * @summary Public Discover feed of trips
+ */
+export const getDiscoverTripsUrl = (params?: DiscoverTripsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/discover/trips?${stringifiedParams}`
+    : `/api/discover/trips`;
+};
+
+export const discoverTrips = async (
+  params?: DiscoverTripsParams,
+  options?: RequestInit,
+): Promise<DiscoverFeed> => {
+  return customFetch<DiscoverFeed>(getDiscoverTripsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDiscoverTripsQueryKey = (params?: DiscoverTripsParams) => {
+  return [`/api/discover/trips`, ...(params ? [params] : [])] as const;
+};
+
+export const getDiscoverTripsQueryOptions = <
+  TData = Awaited<ReturnType<typeof discoverTrips>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: DiscoverTripsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof discoverTrips>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDiscoverTripsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof discoverTrips>>> = ({
+    signal,
+  }) => discoverTrips(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof discoverTrips>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type DiscoverTripsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof discoverTrips>>
+>;
+export type DiscoverTripsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Public Discover feed of trips
+ */
+
+export function useDiscoverTrips<
+  TData = Awaited<ReturnType<typeof discoverTrips>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: DiscoverTripsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof discoverTrips>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getDiscoverTripsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns the public profile and every public trip for the user with the given handle. Handle lookup is case-insensitive. Returns 404 if no user with this handle exists. Open endpoint — no authentication required.
+ * @summary Get a user's public profile and trips
+ */
+export const getGetPublicProfileUrl = (handle: string) => {
+  return `/api/users/${handle}`;
+};
+
+export const getPublicProfile = async (
+  handle: string,
+  options?: RequestInit,
+): Promise<PublicProfilePage> => {
+  return customFetch<PublicProfilePage>(getGetPublicProfileUrl(handle), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPublicProfileQueryKey = (handle: string) => {
+  return [`/api/users/${handle}`] as const;
+};
+
+export const getGetPublicProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicProfile>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  handle: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPublicProfileQueryKey(handle);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPublicProfile>>
+  > = ({ signal }) => getPublicProfile(handle, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!handle,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicProfile>>
+>;
+export type GetPublicProfileQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a user's public profile and trips
+ */
+
+export function useGetPublicProfile<
+  TData = Awaited<ReturnType<typeof getPublicProfile>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  handle: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicProfileQueryOptions(handle, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}

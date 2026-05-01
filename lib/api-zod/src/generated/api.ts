@@ -51,6 +51,10 @@ export const ListTripsResponseItem = zod.object({
   ),
   activeBranchId: zod.string(),
   createdAt: zod.string(),
+  isPublic: zod
+    .boolean()
+    .optional()
+    .describe("When true, this trip is visible in the public Discover feed."),
 });
 export const ListTripsResponse = zod.array(ListTripsResponseItem);
 
@@ -92,6 +96,12 @@ export const ReplaceTripsBody = zod.object({
       ),
       activeBranchId: zod.string(),
       createdAt: zod.string(),
+      isPublic: zod
+        .boolean()
+        .optional()
+        .describe(
+          "When true, this trip is visible in the public Discover feed.",
+        ),
     }),
   ),
 });
@@ -128,5 +138,158 @@ export const ReplaceTripsResponseItem = zod.object({
   ),
   activeBranchId: zod.string(),
   createdAt: zod.string(),
+  isPublic: zod
+    .boolean()
+    .optional()
+    .describe("When true, this trip is visible in the public Discover feed."),
 });
 export const ReplaceTripsResponse = zod.array(ReplaceTripsResponseItem);
+
+/**
+ * Returns the public profile for the authenticated user. If no profile exists yet, one is created on the fly with a handle derived from the user's primary email (everything to the left of `@`, lowercased, stripped of dots and `+tag`s, and with a numeric suffix if the derived handle is already taken). The handle is durable: it is set once at first call and not auto-rewritten if the user later changes their email.
+ * @summary Get-or-create the signed-in user's public profile
+ */
+export const GetMyProfileResponse = zod.object({
+  handle: zod
+    .string()
+    .describe("Public handle, derived from the user's email local part."),
+  createdAt: zod.string(),
+});
+
+/**
+ * Cursor-paginated list of all trips that have been marked public, ordered newest-updated first. Open endpoint — no authentication required. Each item carries the trip and the author's public handle.
+ * @summary Public Discover feed of trips
+ */
+export const discoverTripsQueryLimitMax = 50;
+
+export const DiscoverTripsQueryParams = zod.object({
+  cursor: zod.coerce
+    .string()
+    .optional()
+    .describe("Opaque cursor returned by a previous response"),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(discoverTripsQueryLimitMax)
+    .optional()
+    .describe("Page size (default 20, max 50)"),
+});
+
+export const DiscoverTripsResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      trip: zod.object({
+        id: zod.string(),
+        title: zod.string(),
+        originCity: zod.string(),
+        originCode: zod.string(),
+        startDate: zod.string(),
+        branches: zod.array(
+          zod.object({
+            id: zod.string(),
+            label: zod.string(),
+            parentId: zod.string().nullable(),
+            forkAfterSegmentId: zod.string().nullable(),
+            color: zod.string(),
+            segments: zod.array(
+              zod.object({
+                id: zod.string(),
+                fromCode: zod.string(),
+                fromCity: zod.string(),
+                toCode: zod.string(),
+                toCity: zod.string(),
+                depart: zod.string(),
+                arrive: zod.string(),
+                airline: zod.string(),
+                flightNo: zod.string(),
+                price: zod.number().nullish(),
+              }),
+            ),
+            createdAt: zod.string(),
+          }),
+        ),
+        activeBranchId: zod.string(),
+        createdAt: zod.string(),
+        isPublic: zod
+          .boolean()
+          .optional()
+          .describe(
+            "When true, this trip is visible in the public Discover feed.",
+          ),
+      }),
+      author: zod.object({
+        handle: zod.string(),
+      }),
+      updatedAt: zod
+        .string()
+        .describe("Server timestamp of the last update to this trip."),
+    }),
+  ),
+  nextCursor: zod.string().nullish(),
+});
+
+/**
+ * Returns the public profile and every public trip for the user with the given handle. Handle lookup is case-insensitive. Returns 404 if no user with this handle exists. Open endpoint — no authentication required.
+ * @summary Get a user's public profile and trips
+ */
+export const GetPublicProfileParams = zod.object({
+  handle: zod.coerce.string(),
+});
+
+export const GetPublicProfileResponse = zod.object({
+  profile: zod.object({
+    handle: zod
+      .string()
+      .describe("Public handle, derived from the user's email local part."),
+    createdAt: zod.string(),
+  }),
+  trips: zod.array(
+    zod.object({
+      trip: zod.object({
+        id: zod.string(),
+        title: zod.string(),
+        originCity: zod.string(),
+        originCode: zod.string(),
+        startDate: zod.string(),
+        branches: zod.array(
+          zod.object({
+            id: zod.string(),
+            label: zod.string(),
+            parentId: zod.string().nullable(),
+            forkAfterSegmentId: zod.string().nullable(),
+            color: zod.string(),
+            segments: zod.array(
+              zod.object({
+                id: zod.string(),
+                fromCode: zod.string(),
+                fromCity: zod.string(),
+                toCode: zod.string(),
+                toCity: zod.string(),
+                depart: zod.string(),
+                arrive: zod.string(),
+                airline: zod.string(),
+                flightNo: zod.string(),
+                price: zod.number().nullish(),
+              }),
+            ),
+            createdAt: zod.string(),
+          }),
+        ),
+        activeBranchId: zod.string(),
+        createdAt: zod.string(),
+        isPublic: zod
+          .boolean()
+          .optional()
+          .describe(
+            "When true, this trip is visible in the public Discover feed.",
+          ),
+      }),
+      author: zod.object({
+        handle: zod.string(),
+      }),
+      updatedAt: zod
+        .string()
+        .describe("Server timestamp of the last update to this trip."),
+    }),
+  ),
+});

@@ -1,29 +1,16 @@
-import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { getAuth } from "@clerk/express";
+import { clerkClient } from "@clerk/express";
 import { db, tripsTable } from "@workspace/db";
 import {
   ListTripsResponse,
   ReplaceTripsBody,
   ReplaceTripsResponse,
 } from "@workspace/api-zod";
+import { requireAuth, type AuthedRequest } from "../lib/requireAuth";
+import { ensureUserProfile } from "../lib/userProfile";
 
 const router: IRouter = Router();
-
-type AuthedRequest = Request & { userId?: string };
-
-function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  const auth = getAuth(req);
-  const userId =
-    (auth?.sessionClaims as { userId?: string } | undefined)?.userId ||
-    auth?.userId;
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  (req as AuthedRequest).userId = userId;
-  next();
-}
 
 router.get("/trips", requireAuth, async (req, res): Promise<void> => {
   const userId = (req as AuthedRequest).userId!;
@@ -33,7 +20,13 @@ router.get("/trips", requireAuth, async (req, res): Promise<void> => {
     .from(tripsTable)
     .where(eq(tripsTable.userId, userId));
 
-  const trips = rows.map((row) => row.payload);
+  // Make sure the boolean column wins over a stale `isPublic` inside the
+  // JSON payload — that way the client always sees the source of truth
+  // even if an older client wrote a payload with no `isPublic` field set.
+  const trips = rows.map((row) => ({
+    ...(row.payload as Record<string, unknown>),
+    isPublic: row.isPublic,
+  }));
   const data = ListTripsResponse.parse(trips);
   res.json(data);
 });
@@ -52,6 +45,29 @@ router.put("/trips", requireAuth, async (req, res): Promise<void> => {
   }
   const { trips } = bodyParse.data;
 
+  const publicCount = trips.filter((t) => t.isPublic === true).length;
+
+  // If this PUT contains *any* public trip we have to make sure the author
+  // has a `user_profiles` row before the rows land — otherwise the inner
+  // join in `/discover/trips` would silently drop them. We do this before
+  // the trips transaction so that on profile-creation failure no public
+  // trip ends up persisted that wouldn't be discoverable.
+  if (publicCount > 0) {
+    await ensureUserProfile(userId, async () => {
+      try {
+        const user = await clerkClient.users.getUser(userId);
+        const primary = user.emailAddresses.find(
+          (e) => e.id === user.primaryEmailAddressId,
+        );
+        return (
+          primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? ""
+        );
+      } catch {
+        return "";
+      }
+    });
+  }
+
   await db.transaction(async (tx) => {
     await tx.delete(tripsTable).where(eq(tripsTable.userId, userId));
     if (trips.length > 0) {
@@ -59,13 +75,20 @@ router.put("/trips", requireAuth, async (req, res): Promise<void> => {
         trips.map((trip) => ({
           id: trip.id,
           userId,
+          // The full trip JSON is the source of truth for everything other
+          // than discoverability; we mirror just `isPublic` into its own
+          // column so the Discover feed query can be a single indexed scan.
           payload: trip,
+          isPublic: trip.isPublic === true,
         })),
       );
     }
   });
 
-  req.log.info({ userId, count: trips.length }, "replaced trips");
+  req.log.info(
+    { userId, count: trips.length, public: publicCount },
+    "replaced trips",
+  );
   const data = ReplaceTripsResponse.parse(trips);
   res.json(data);
 });

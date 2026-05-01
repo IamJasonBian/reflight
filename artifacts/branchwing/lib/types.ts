@@ -30,6 +30,10 @@ export type Trip = {
   branches: Branch[];
   activeBranchId: string;
   createdAt: string;
+  // When true, this trip is published to the public Discover feed and to
+  // the author's public profile page. Default false. Toggled from the
+  // trip-detail screen and synced through the existing /trips PUT call.
+  isPublic?: boolean;
 };
 
 export type RouteMeta = {

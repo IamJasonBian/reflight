@@ -16,4 +16,6 @@ export interface Trip {
   branches: Branch[];
   activeBranchId: string;
   createdAt: string;
+  /** When true, this trip is visible in the public Discover feed. */
+  isPublic?: boolean;
 }

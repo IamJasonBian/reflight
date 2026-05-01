@@ -43,6 +43,7 @@ type TripsContextType = {
   ) => Branch;
   renameBranch: (tripId: string, branchId: string, label: string) => void;
   deleteBranch: (tripId: string, branchId: string) => void;
+  setTripPublic: (tripId: string, isPublic: boolean) => void;
 };
 
 const TripsContext = createContext<TripsContextType | null>(null);
@@ -319,6 +320,15 @@ export function TripsProvider({
     [persist],
   );
 
+  const setTripPublic = useCallback(
+    (tripId: string, isPublic: boolean) => {
+      persist((prev) =>
+        prev.map((t) => (t.id === tripId ? { ...t, isPublic } : t)),
+      );
+    },
+    [persist],
+  );
+
   const deleteBranch = useCallback(
     (tripId: string, branchId: string) => {
       persist((prev) =>
@@ -354,6 +364,7 @@ export function TripsProvider({
       forkBranch,
       renameBranch,
       deleteBranch,
+      setTripPublic,
     }),
     [
       trips,
@@ -368,6 +379,7 @@ export function TripsProvider({
       forkBranch,
       renameBranch,
       deleteBranch,
+      setTripPublic,
     ],
   );
 
