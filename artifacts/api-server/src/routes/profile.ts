@@ -28,11 +28,8 @@ router.get("/me/profile", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  // Let any Clerk failure propagate. We deliberately don't swallow-and-fallback
-  // because the very first ensureUserProfile call permanently writes the
-  // derived handle — assigning `user_<hash>` because Clerk happened to be
-  // briefly unavailable would brand the user with a noisy handle forever.
-  // 503 lets the client retry once Clerk is healthy again.
+  // Don't swallow Clerk errors — fallback handles are permanent. 503 lets
+  // the client retry once Clerk recovers.
   try {
     const created = await ensureUserProfile(userId, () =>
       fetchPrimaryEmail(userId),

@@ -1,5 +1,5 @@
 {
-  "id": "7dd712b1-310f-425c-9acf-971ebbf5db65",
+  "id": "c68e6e71-b5de-4100-931b-1f6facb33751",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -109,18 +109,26 @@
           "default": "now()"
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "user_profiles_handle_unique": {
-          "name": "user_profiles_handle_unique",
-          "nullsNotDistinct": false,
+      "indexes": {
+        "user_profiles_handle_lower_unique": {
+          "name": "user_profiles_handle_lower_unique",
           "columns": [
-            "handle"
-          ]
+            {
+              "expression": "lower(\"handle\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

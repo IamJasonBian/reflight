@@ -39,23 +39,9 @@ type LoadState =
   | { kind: "notFound" }
   | { kind: "error" };
 
-/**
- * Read-only Trip viewer reachable from the Discover feed and from public
- * profile pages. Shares the same Spine / Tree view-mode toggle and branch
- * navigation as the owner-facing `app/trip/[id].tsx`, but with all editing
- * affordances stripped:
- *   - no Add-flight FAB
- *   - no fork-after, no delete-trip, no delete-branch
- *   - no Public/Private toggle
- *   - no New-branch chip
- *
- * Visitors can still flip between branches and switch between the Spine and
- * Tree visualizations to fully browse the itinerary the author shared.
- *
- * The endpoint returns 404 for both "no such trip" and "trip exists but is
- * private" — we render the same friendly empty state for both. Network
- * errors get a retry button.
- */
+// Read-only Trip viewer for public trips, reached from /discover or
+// /users/<handle>. The endpoint returns 404 for both missing and private
+// trips, both shown as the same "Trip unavailable" empty state.
 export default function PublicTripScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -81,9 +67,6 @@ export default function PublicTripScreen() {
       if (cancelled) return;
       if (r.kind === "ok") {
         setState({ kind: "ok", result: r });
-        // Reset to the trip's stored active branch every time we
-        // (re-)load — otherwise a focus refresh after the author
-        // edited their trip could leave us on a deleted branch id.
         setActiveBranchId(r.item.trip.activeBranchId);
       } else if (r.kind === "notFound") {
         setState({ kind: "notFound" });
@@ -234,8 +217,6 @@ export default function PublicTripScreen() {
           </View>
         </View>
 
-        {/* Spacer mirrors the trash button in the owner view so the toggle
-            stays optically centered. */}
         <View style={styles.iconBtn} />
       </View>
 

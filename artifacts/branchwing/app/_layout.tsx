@@ -100,13 +100,8 @@ function LoadingScreen() {
   );
 }
 
-/**
- * Reads Clerk auth state and:
- * 1. Installs a token getter so tripsSync can attach Authorization headers.
- * 2. Redirects between the auth screens and the rest of the app based on
- *    sign-in state.
- * 3. Mounts the per-user TripsProvider only once a userId is available.
- */
+// Routes between auth screens and the app, and wires Clerk tokens into
+// the sync/discover API helpers.
 function AuthGate() {
   const { isLoaded, isSignedIn, userId, getToken } = useAuth();
   const segments = useSegments();
@@ -125,10 +120,6 @@ function AuthGate() {
     if (!isLoaded) return;
     const first = segments[0];
     const inAuthScreen = first === "sign-in" || first === "sign-up";
-    // Discover, the public profile pages, and the read-only public trip
-    // viewer must be reachable without an account — that's the whole point
-    // of "public" trips. We still gate everything else (home, /trip/[id],
-    // settings) behind sign-in.
     const inPublicScreen =
       first === "discover" || first === "users" || first === "public-trips";
     if (!isSignedIn && !inAuthScreen && !inPublicScreen) {
@@ -140,10 +131,8 @@ function AuthGate() {
 
   if (!isLoaded) return <LoadingScreen />;
 
-  // TripsProvider tolerates a null userId (no-op) and stays mounted across
-  // sign-in / sign-out transitions so the Stack itself never has to be
-  // unmounted — that mount/unmount churn was painting blank screens after
-  // sign-out.
+  // TripsProvider stays mounted across sign-in/out so the Stack never
+  // unmounts (avoids blank screens on sign-out).
   return (
     <TripsProvider userId={userId ?? null}>
       <AppStack />

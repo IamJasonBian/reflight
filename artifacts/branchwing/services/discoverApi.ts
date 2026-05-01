@@ -1,13 +1,5 @@
-/**
- * Public/discover-side API helpers.
- *
- * Reuses the same `API_BASE` resolver and Clerk-token getter from
- * `tripsSync.ts` so we get one consistent base URL across the app and one
- * place to plug in/out auth. The `/discover/trips` and `/users/{handle}`
- * endpoints are unauthenticated, but we still attach the Bearer token when
- * we have one — it's a no-op for the server today and gives us a free hook
- * for future per-user-personalized feeds.
- */
+// Discover/public API helpers. Endpoints are unauthenticated but we attach
+// the Bearer token when present so future personalized feeds have a hook.
 import type { Trip } from "@/lib/types";
 import { API_BASE } from "@/services/tripsSync";
 

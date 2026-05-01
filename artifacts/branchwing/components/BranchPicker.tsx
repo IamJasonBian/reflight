@@ -18,7 +18,6 @@ type Props = {
   branches: Branch[];
   activeBranchId: string;
   onSelect: (id: string) => void;
-  // Optional so the read-only public-trip viewer can hide the "+ branch" CTA.
   onNewBranch?: () => void;
 };
 

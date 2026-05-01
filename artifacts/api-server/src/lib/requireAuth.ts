@@ -1,11 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 
-/**
- * Augment Express's Request with the resolved Clerk user id once
- * `requireAuth` has run. Routes that come *after* the middleware can safely
- * read `req.userId` without re-deriving it from the Clerk session claims.
- */
+// Request augmented with the Clerk user id by requireAuth.
 export type AuthedRequest = Request & { userId?: string };
 
 export function requireAuth(

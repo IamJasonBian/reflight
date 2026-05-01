@@ -36,11 +36,8 @@ export default function AccountScreen() {
   const { session } = useSession();
   const [busy, setBusy] = React.useState<null | "signout" | "delete">(null);
 
-  // Custom reverification: when Clerk says the session is too old to perform
-  // a sensitive action like `user.delete()`, we show our own password modal,
-  // re-verify with `session.startVerification` + `attemptFirstFactorVerification`,
-  // and then resume the original action. This avoids depending on Clerk's
-  // built-in modal UI (which doesn't render in @clerk/expo's web build).
+  // Custom password-reverify modal because @clerk/expo's web build doesn't
+  // render Clerk's built-in reverification UI.
   const [reverify, setReverify] = React.useState<ReverifyState | null>(null);
   const [reverifyPassword, setReverifyPassword] = React.useState("");
   const [reverifyError, setReverifyError] = React.useState<string | null>(null);
@@ -105,10 +102,7 @@ export default function AccountScreen() {
 
   const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
-  // Pull (or lazily create) the public profile so the user can see their
-  // handle exactly as it shows up in Discover. We re-fetch whenever the
-  // signed-in user changes so a sign-out + sign-in cycle doesn't leak the
-  // previous user's handle into the next session.
+  // Public profile (handle) shown in Discover; re-fetched per signed-in user.
   const [profile, setProfile] = React.useState<MyProfile | null>(null);
   React.useEffect(() => {
     let cancelled = false;
@@ -169,34 +163,20 @@ export default function AccountScreen() {
         (async () => {
           setBusy("delete");
           try {
-            // 1. Purge trips on the server while we still hold a valid Clerk
-            //    session/token. We MUST verify the purge succeeded; if it
-            //    fails (network/server) we abort before touching the Clerk
-            //    user so we never end up with the user record gone but their
-            //    trip data still retained on the backend (App Privacy /
-            //    Guideline 5.1.1(v) requires both go together).
+            // Purge server-side trips first (requires valid Clerk token).
+            // Bail before touching the Clerk user if the purge fails so we
+            // never orphan trip data on the server.
             const purged = await purgeRemoteTrips();
             if (!purged) {
               throw new Error(
                 "Couldn't reach Branchwing's servers to delete your trips. Please check your connection and try again.",
               );
             }
-            // 2. Drop this user's local cache so re-signup on the same device
-            //    doesn't see ghost trips before reconcile.
             if (user?.id) await dropUserCache(user.id);
-            // 3. Delete the Clerk user (handles reverification challenge via
-            //    the password modal above if needed). Then sign out so the
-            //    AuthGate redirect to /sign-in fires immediately.
-            //
-            //    If this rejects after the server purge has already succeeded,
-            //    the user's data is already gone; only the auth record remains.
-            //    Surface that explicitly so they know what to retry.
             try {
               await deleteUser();
             } catch (err) {
               if (err instanceof Error && /cancel/i.test(err.message)) {
-                // User cancelled the password modal — re-throw so the outer
-                // catch swallows silently.
                 throw err;
               }
               throw new Error(
@@ -208,7 +188,6 @@ export default function AccountScreen() {
             setBusy(null);
             const msg =
               err instanceof Error ? err.message : "Could not delete account.";
-            // Cancellation from the password modal is expected; don't yell.
             if (!/cancel/i.test(msg)) {
               if (Platform.OS === "web") {
                 if (typeof window !== "undefined") window.alert(msg);

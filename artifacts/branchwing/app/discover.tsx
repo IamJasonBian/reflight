@@ -19,15 +19,7 @@ import {
   type DiscoverItem,
 } from "@/services/discoverApi";
 
-/**
- * Discover feed: a chronological, public, cross-user list of trips that
- * authors have explicitly marked public. Cursor-paginated — we load 20 at
- * a time and append on scroll-end.
- *
- * No auth gate (the endpoint is public), but we still navigate from the
- * authenticated home screen, so reaching this screen always implies the
- * Clerk session is loaded.
- */
+// Cursor-paginated public feed of trips authors have marked public.
 export default function DiscoverScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -52,8 +44,6 @@ export default function DiscoverScreen() {
     }
   }, []);
 
-  // Always refresh on focus so a user who toggles their own trip to public
-  // and then taps the Discover icon sees their new trip immediately.
   useFocusEffect(
     React.useCallback(() => {
       let cancelled = false;

@@ -15,16 +15,9 @@ const router: IRouter = Router();
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
-/**
- * Cursor format: `<isoTimestamp>|<tripId>`. Both fields are required so the
- * pagination is deterministic when many public trips share the same
- * `updated_at` (the seed-trip case in particular). Stale or malformed
- * cursors are silently ignored — we'd rather show the first page than
- * 400 on an old client build.
- *
- * The composite index `trips_public_feed_idx` already covers
- * `(is_public, updated_at desc, id desc)` so this scan stays cheap.
- */
+// Cursor: `<isoTimestamp>|<tripId>`. Tie-break on id keeps pages stable
+// when multiple public trips share the same updatedAt. Bad cursors are
+// treated as "no cursor" so old clients don't 400.
 function parseCursor(
   raw: string | undefined,
 ): { updatedAt: Date; id: string } | undefined {
@@ -53,24 +46,9 @@ router.get("/discover/trips", async (req, res): Promise<void> => {
   const limit = Math.min(rawLimit ?? DEFAULT_LIMIT, MAX_LIMIT);
   const after = parseCursor(cursor);
 
-  // Inner-join against user_profiles so trips authored by users who have
-  // never hit /me/profile (and therefore have no handle yet) silently skip
-  // the feed — there'd be no way to render them anyway. New flow on the
-  // server side ensures a profile always exists before a trip can become
-  // public, so this should never silently drop rows in practice.
-  // Both the cursor boundary and the ORDER BY MUST operate on the same
-  // sort key, otherwise two rows in the same millisecond bucket but with
-  // different microseconds can end up ordered one way at the row level and
-  // a different way at the page boundary — which silently skips rows
-  // across page transitions.
-  //
-  // We use millisecond-truncated `updated_at` because that's the precision
-  // we can faithfully round-trip through `Date.toISOString()` in the
-  // cursor. Postgres `timestamptz` keeps microseconds but a JS Date does
-  // not. The composite index `(is_public, updated_at desc, id desc)`
-  // still serves the `is_public = true` predicate cheaply; for the
-  // current dataset size (<10k public trips) the residual ordering is a
-  // trivial in-memory sort.
+  // Truncate updatedAt to ms so the cursor (which round-trips through a JS
+  // Date) and the ORDER BY use the exact same key — otherwise sub-ms
+  // microseconds in Postgres can desync row order from page boundaries.
   const updatedAtMs = sql`date_trunc('milliseconds', ${tripsTable.updatedAt})`;
 
   const baseConds = [eq(tripsTable.isPublic, true)];
@@ -127,10 +105,8 @@ router.get("/discover/trips/:id", async (req, res): Promise<void> => {
   }
   const { id } = paramsParse.data;
 
-  // Same inner-join shape as the feed query so we never return a row whose
-  // author has no profile. We treat "no row" and "private trip" identically
-  // (404) so a stranger can't probe whether a private trip with a given id
-  // exists at all.
+  // 404 covers both "no row" and "private trip" so callers can't probe
+  // whether a private trip exists by id.
   const rows = await db
     .select({
       payload: tripsTable.payload,
@@ -165,8 +141,6 @@ router.get("/users/:handle", async (req, res): Promise<void> => {
     res.status(400).json({ error: paramsParse.error.message });
     return;
   }
-  // Handle lookup is case-insensitive — handles are stored lowercased,
-  // so just lowercase the request and compare directly.
   const handle = paramsParse.data.handle.toLowerCase();
 
   const profileRows = await db

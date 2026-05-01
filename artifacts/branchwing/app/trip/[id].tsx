@@ -47,18 +47,10 @@ export default function TripScreen() {
     setTripPublic,
   } = useTrips();
   const [view, setView] = useState<ViewMode>("spine");
-  // Cached so the privacy-toggle confirmation can name the user's handle in
-  // the copy ("This trip will appear in Discover under @handle") AND so the
-  // post-confirm public-state row can render a tappable @handle pill linking
-  // to the public profile. Lazy-fetched the first time we need it, then
-  // cached for subsequent toggles within the same screen.
   const [myHandle, setMyHandle] = useState<string | null>(null);
 
   const trip = id ? getTrip(id) : undefined;
 
-  // Pre-fetch the handle whenever the trip is already public, so the pill
-  // below the toggle row can render on initial mount without waiting for
-  // the user to interact. Cheap (single GET) and only runs once per id.
   useEffect(() => {
     if (!trip?.isPublic || myHandle) return;
     let cancelled = false;
@@ -173,11 +165,6 @@ export default function TripScreen() {
     );
   };
 
-  // The privacy toggle is destructive in both directions: going public
-  // exposes a private trip to the world, and going private removes a trip
-  // that strangers may have already bookmarked. Always confirm, and name
-  // the author's handle in the copy so they know exactly which public
-  // identity the trip will be associated with.
   const confirmTogglePublic = async () => {
     if (!trip) return;
     if (Platform.OS !== "web") {
@@ -187,10 +174,6 @@ export default function TripScreen() {
 
     let handle = myHandle;
     if (goingPublic && !handle) {
-      // Fetch handle on the fly so we can mention it in the dialog. If it
-      // fails (offline, server hiccup) we still allow the toggle but with a
-      // generic copy — the server-side ensureUserProfile path will derive
-      // and persist the handle on the next sync.
       const me = await fetchMyProfile();
       if (me) {
         handle = me.handle;

@@ -12,19 +12,9 @@ import {
 } from "@/lib/time";
 import type { Trip } from "@/lib/types";
 
-/**
- * Read-only card used in the Discover feed and on public profile pages.
- * Visually mirrors the home `TripCard` but always shows the author's @handle
- * and never exposes any edit affordances.
- *
- * Two independent tap targets:
- *   - the @handle pill at the top → `onPressHandle` (open author profile)
- *   - the rest of the card body → `onPressTrip` (open read-only trip detail)
- *
- * On a profile screen the handle tap is redundant (we're already on the
- * author's page) so callers can simply omit `onPressHandle` to disable that
- * affordance.
- */
+// Read-only trip card for Discover and public profiles. Two tap targets:
+// the @handle pill (onPressHandle) and the body (onPressTrip). Omit
+// onPressHandle on profile screens to disable the handle tap.
 export function PublicTripCard({
   trip,
   authorHandle,

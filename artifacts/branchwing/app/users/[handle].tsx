@@ -24,12 +24,7 @@ type LoadState =
   | { kind: "notFound" }
   | { kind: "error" };
 
-/**
- * Public profile page for a single handle. Lists every trip that user has
- * chosen to mark public. 404 from the API renders a friendly "no such user"
- * empty state instead of a generic crash — a stale Discover cache could
- * point us at a deleted account.
- */
+// Public profile for one handle. Lists that author's public trips.
 export default function UserProfileScreen() {
   const colors = useColors();
   const router = useRouter();
@@ -167,8 +162,6 @@ export default function UserProfileScreen() {
               onPressTrip={() =>
                 router.push(`/public-trips/${encodeURIComponent(item.trip.id)}`)
               }
-              // We're already on this user's profile, so omit onPressHandle —
-              // the card hides the chevron and disables the handle pill.
             />
           )}
         />
