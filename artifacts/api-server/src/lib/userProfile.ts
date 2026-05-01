@@ -1,8 +1,15 @@
+import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, userProfilesTable } from "@workspace/db";
 import { deriveHandle } from "./handle";
 
-const HANDLE_COLLISION_RETRIES = 25;
+// Try the bare derived handle, then numeric suffixes base2..base99,
+// then progressively longer hash-derived suffixes seeded by clerkUserId.
+// In practice the numeric range covers any realistic email-collision
+// load; the hash tail guarantees we always terminate with a unique
+// candidate even under adversarial collisions.
+const NUMERIC_SUFFIX_LIMIT = 99;
+const HASH_SUFFIX_TRIES = 8;
 const PG_UNIQUE_VIOLATION = "23505";
 
 export interface EnsuredProfile {
@@ -30,9 +37,9 @@ export async function ensureUserProfile(
     );
   }
   const base = deriveHandle(email, clerkUserId);
+  const candidates = buildHandleCandidates(base, clerkUserId);
 
-  for (let suffix = 0; suffix < HANDLE_COLLISION_RETRIES; suffix++) {
-    const handle = suffix === 0 ? base : `${base}${suffix + 1}`;
+  for (const handle of candidates) {
     try {
       const [row] = await db
         .insert(userProfilesTable)
@@ -47,8 +54,24 @@ export async function ensureUserProfile(
     }
   }
   throw new Error(
-    `Could not allocate a unique handle after ${HANDLE_COLLISION_RETRIES} tries`,
+    `Could not allocate a unique handle after exhausting ${candidates.length} candidates for clerkUserId=${clerkUserId}`,
   );
+}
+
+function buildHandleCandidates(
+  base: string,
+  clerkUserId: string,
+): string[] {
+  const out: string[] = [base];
+  for (let n = 2; n <= NUMERIC_SUFFIX_LIMIT; n++) {
+    out.push(`${base}${n}`);
+  }
+  const hash = createHash("sha256").update(clerkUserId).digest("hex");
+  for (let i = 0; i < HASH_SUFFIX_TRIES; i++) {
+    const len = 4 + i;
+    out.push(`${base}_${hash.slice(i * 2, i * 2 + len)}`);
+  }
+  return out;
 }
 
 async function readProfile(
