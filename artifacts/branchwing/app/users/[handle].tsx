@@ -159,6 +159,7 @@ export default function UserProfileScreen() {
             <PublicTripCard
               trip={item.trip}
               authorHandle={state.page.profile.handle}
+              updatedAt={item.updatedAt}
               onPressTrip={() =>
                 router.push(`/public-trips/${encodeURIComponent(item.trip.id)}`)
               }

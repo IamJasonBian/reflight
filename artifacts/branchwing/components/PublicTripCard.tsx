@@ -9,6 +9,7 @@ import {
   branchTotalPrice,
   fmtDate,
   fmtPrice,
+  fmtRelative,
 } from "@/lib/time";
 import type { Trip } from "@/lib/types";
 
@@ -18,11 +19,13 @@ import type { Trip } from "@/lib/types";
 export function PublicTripCard({
   trip,
   authorHandle,
+  updatedAt,
   onPressTrip,
   onPressHandle,
 }: {
   trip: Trip;
   authorHandle: string;
+  updatedAt?: string;
   onPressTrip?: () => void;
   onPressHandle?: () => void;
 }) {
@@ -108,6 +111,7 @@ export function PublicTripCard({
         </Text>
         <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>
           {fmtDate(trip.startDate)} · from {trip.originCity}
+          {updatedAt ? ` · updated ${fmtRelative(updatedAt)}` : ""}
         </Text>
         <View style={styles.metaRow}>
         <Pill

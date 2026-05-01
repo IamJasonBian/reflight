@@ -20,7 +20,10 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { TripsProvider } from "@/contexts/TripsContext";
 import { setSyncAuthTokenGetter } from "@/services/tripsSync";
-import { setDiscoverAuthTokenGetter } from "@/services/discoverApi";
+import {
+  fetchMyProfile,
+  setDiscoverAuthTokenGetter,
+} from "@/services/discoverApi";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -128,6 +131,26 @@ function AuthGate() {
       router.replace("/" as Href);
     }
   }, [isLoaded, isSignedIn, segments, router]);
+
+  // Bootstrap the public profile once per signed-in user so a Discover
+  // handle exists even for users who never make a trip public.
+  useEffect(() => {
+    if (!isSignedIn || !userId) return;
+    let cancelled = false;
+    fetchMyProfile()
+      .catch(() => null)
+      .then((p) => {
+        if (cancelled) return;
+        if (!p) {
+          setTimeout(() => {
+            if (!cancelled) fetchMyProfile().catch(() => null);
+          }, 5000);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, userId]);
 
   if (!isLoaded) return <LoadingScreen />;
 
