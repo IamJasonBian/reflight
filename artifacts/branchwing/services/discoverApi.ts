@@ -74,6 +74,28 @@ export async function fetchDiscoverFeed(opts?: {
   }
 }
 
+export type FetchPublicTripResult =
+  | { kind: "ok"; item: DiscoverItem }
+  | { kind: "notFound" }
+  | { kind: "error" };
+
+export async function fetchPublicTrip(
+  id: string,
+): Promise<FetchPublicTripResult> {
+  try {
+    const headers = await buildHeaders();
+    const res = await fetch(
+      `${API_BASE}/discover/trips/${encodeURIComponent(id)}`,
+      { headers },
+    );
+    if (res.status === 404) return { kind: "notFound" };
+    if (!res.ok) return { kind: "error" };
+    return { kind: "ok", item: (await res.json()) as DiscoverItem };
+  } catch {
+    return { kind: "error" };
+  }
+}
+
 export type FetchPublicProfileResult =
   | { kind: "ok"; page: PublicProfilePage }
   | { kind: "notFound" }

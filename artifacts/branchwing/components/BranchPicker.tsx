@@ -18,7 +18,8 @@ type Props = {
   branches: Branch[];
   activeBranchId: string;
   onSelect: (id: string) => void;
-  onNewBranch: () => void;
+  // Optional so the read-only public-trip viewer can hide the "+ branch" CTA.
+  onNewBranch?: () => void;
 };
 
 export function BranchPicker({
@@ -98,21 +99,23 @@ export function BranchPicker({
         );
       })}
 
-      <Pressable
-        onPress={onNewBranch}
-        style={({ pressed }) => [
-          styles.newBtn,
-          {
-            borderColor: colors.border,
-            opacity: pressed ? 0.7 : 1,
-          },
-        ]}
-      >
-        <Feather name="git-branch" size={13} color={colors.mutedForeground} />
-        <Text style={[styles.newBtnText, { color: colors.mutedForeground }]}>
-          New branch
-        </Text>
-      </Pressable>
+      {onNewBranch ? (
+        <Pressable
+          onPress={onNewBranch}
+          style={({ pressed }) => [
+            styles.newBtn,
+            {
+              borderColor: colors.border,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Feather name="git-branch" size={13} color={colors.mutedForeground} />
+          <Text style={[styles.newBtnText, { color: colors.mutedForeground }]}>
+            New branch
+          </Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }

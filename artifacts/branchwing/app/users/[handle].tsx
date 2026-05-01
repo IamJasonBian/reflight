@@ -164,6 +164,11 @@ export default function UserProfileScreen() {
             <PublicTripCard
               trip={item.trip}
               authorHandle={state.page.profile.handle}
+              onPressTrip={() =>
+                router.push(`/public-trips/${encodeURIComponent(item.trip.id)}`)
+              }
+              // We're already on this user's profile, so omit onPressHandle —
+              // the card hides the chevron and disables the handle pill.
             />
           )}
         />

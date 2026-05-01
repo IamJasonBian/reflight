@@ -15,17 +15,26 @@ import type { Trip } from "@/lib/types";
 /**
  * Read-only card used in the Discover feed and on public profile pages.
  * Visually mirrors the home `TripCard` but always shows the author's @handle
- * and never exposes any edit affordances. Tapping the card navigates to that
- * author's public profile so a viewer can see all of their public trips.
+ * and never exposes any edit affordances.
+ *
+ * Two independent tap targets:
+ *   - the @handle pill at the top → `onPressHandle` (open author profile)
+ *   - the rest of the card body → `onPressTrip` (open read-only trip detail)
+ *
+ * On a profile screen the handle tap is redundant (we're already on the
+ * author's page) so callers can simply omit `onPressHandle` to disable that
+ * affordance.
  */
 export function PublicTripCard({
   trip,
   authorHandle,
-  onPress,
+  onPressTrip,
+  onPressHandle,
 }: {
   trip: Trip;
   authorHandle: string;
-  onPress?: () => void;
+  onPressTrip?: () => void;
+  onPressHandle?: () => void;
 }) {
   const colors = useColors();
   const active =
@@ -42,18 +51,32 @@ export function PublicTripCard({
   const hasPrice = active ? branchHasAnyPrice(active.segments) : false;
 
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
+    <View
+      style={[
         styles.card,
         {
           backgroundColor: colors.card,
           borderColor: colors.border,
-          opacity: pressed ? 0.92 : 1,
         },
       ]}
     >
-      <View style={styles.row}>
+      <Pressable
+        onPress={onPressHandle}
+        disabled={!onPressHandle}
+        accessibilityRole="link"
+        accessibilityLabel={`See @${authorHandle}'s public profile`}
+        hitSlop={6}
+        style={({ pressed }) => [
+          styles.row,
+          styles.handleRow,
+          {
+            backgroundColor: onPressHandle
+              ? `${colors.primary}11`
+              : "transparent",
+            opacity: pressed ? 0.7 : 1,
+          },
+        ]}
+      >
         <View
           style={[
             styles.avatar,
@@ -68,17 +91,35 @@ export function PublicTripCard({
         >
           @{authorHandle}
         </Text>
-      </View>
-      <Text
-        style={[styles.title, { color: colors.foreground }]}
-        numberOfLines={1}
+        {onPressHandle ? (
+          <Feather
+            name="chevron-right"
+            size={14}
+            color={colors.primary}
+            style={{ opacity: 0.6 }}
+          />
+        ) : null}
+      </Pressable>
+      <Pressable
+        onPress={onPressTrip}
+        disabled={!onPressTrip}
+        accessibilityRole="link"
+        accessibilityLabel={`Open ${trip.title}`}
+        style={({ pressed }) => [
+          styles.body,
+          { opacity: pressed && onPressTrip ? 0.85 : 1 },
+        ]}
       >
-        {trip.title}
-      </Text>
-      <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>
-        {fmtDate(trip.startDate)} · from {trip.originCity}
-      </Text>
-      <View style={styles.metaRow}>
+        <Text
+          style={[styles.title, { color: colors.foreground }]}
+          numberOfLines={1}
+        >
+          {trip.title}
+        </Text>
+        <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>
+          {fmtDate(trip.startDate)} · from {trip.originCity}
+        </Text>
+        <View style={styles.metaRow}>
         <Pill
           label={`${trip.branches.length} branch${trip.branches.length === 1 ? "" : "es"}`}
           color={colors.primary}
@@ -105,8 +146,9 @@ export function PublicTripCard({
             bg={active?.color ?? colors.primary}
           />
         )}
-      </View>
-    </Pressable>
+        </View>
+      </Pressable>
+    </View>
   );
 }
 
@@ -121,6 +163,15 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+  },
+  handleRow: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+  },
+  body: {
     gap: 8,
   },
   avatar: {

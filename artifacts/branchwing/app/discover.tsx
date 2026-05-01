@@ -164,7 +164,10 @@ export default function DiscoverScreen() {
             <PublicTripCard
               trip={item.trip}
               authorHandle={item.author.handle}
-              onPress={() =>
+              onPressTrip={() =>
+                router.push(`/public-trips/${encodeURIComponent(item.trip.id)}`)
+              }
+              onPressHandle={() =>
                 router.push(`/users/${encodeURIComponent(item.author.handle)}`)
               }
             />

@@ -18,7 +18,7 @@ export interface EnsuredProfile {
  *
  * Strategy:
  *   1. Read first — by far the common path after the first call.
- *   2. If missing, derive a candidate handle from the (lazily-fetched)
+ *   2. If missing, derive a candidate handle from the (eagerly-fetched)
  *      email and attempt an INSERT. We treat the unique-violation error
  *      code (`23505`) as one of two distinct cases:
  *        a) `clerk_user_id` collided → the row was just created by another
@@ -30,7 +30,13 @@ export interface EnsuredProfile {
  *      existence on every 23505 — that's both cheap and unambiguous.
  *
  * `getEmail` is a thunk so the fast path (profile already exists) doesn't
- * pay for a Clerk API round-trip.
+ * pay for a Clerk API round-trip. CRITICAL: the thunk MUST throw on
+ * transient Clerk failures (do not swallow and return `""`). The handle
+ * is derived from the email and persisted forever on first write — if we
+ * accept an empty email we'll permanently assign the user a `user_<hash>`
+ * fallback handle even though their real email was just temporarily
+ * unreachable. Better to bubble the error: the next call (after Clerk
+ * recovers) will derive the real handle and succeed.
  */
 export async function ensureUserProfile(
   clerkUserId: string,
@@ -40,6 +46,17 @@ export async function ensureUserProfile(
   if (existing) return existing;
 
   const email = await getEmail();
+  // Defense in depth — even if a future caller passes a thunk that
+  // accidentally returns "" without throwing, refuse rather than silently
+  // baking a fallback handle into the row forever. The route handler
+  // above this should map the thrown error to a 503 so the client can
+  // retry; on retry the email is usually available.
+  if (!email || email.trim().length === 0) {
+    throw new Error(
+      "ensureUserProfile: empty email; refusing to persist a fallback handle for clerkUserId=" +
+        clerkUserId,
+    );
+  }
   const base = deriveHandle(email, clerkUserId);
 
   for (let suffix = 0; suffix < HANDLE_COLLISION_RETRIES; suffix++) {

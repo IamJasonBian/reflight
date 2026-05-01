@@ -75,6 +75,10 @@ function AppStack() {
         name="users/[handle]"
         options={{ animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="public-trips/[id]"
+        options={{ animation: "slide_from_right" }}
+      />
       <Stack.Screen name="sign-in" options={{ animation: "fade" }} />
       <Stack.Screen name="sign-up" options={{ animation: "fade" }} />
     </Stack>
@@ -121,7 +125,13 @@ function AuthGate() {
     if (!isLoaded) return;
     const first = segments[0];
     const inAuthScreen = first === "sign-in" || first === "sign-up";
-    if (!isSignedIn && !inAuthScreen) {
+    // Discover, the public profile pages, and the read-only public trip
+    // viewer must be reachable without an account — that's the whole point
+    // of "public" trips. We still gate everything else (home, /trip/[id],
+    // settings) behind sign-in.
+    const inPublicScreen =
+      first === "discover" || first === "users" || first === "public-trips";
+    if (!isSignedIn && !inAuthScreen && !inPublicScreen) {
       router.replace("/sign-in" as Href);
     } else if (isSignedIn && inAuthScreen) {
       router.replace("/" as Href);

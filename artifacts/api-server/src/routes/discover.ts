@@ -6,6 +6,8 @@ import {
   DiscoverTripsResponse,
   GetPublicProfileParams,
   GetPublicProfileResponse,
+  GetPublicTripParams,
+  GetPublicTripResponse,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -113,6 +115,46 @@ router.get("/discover/trips", async (req, res): Promise<void> => {
       updatedAt: r.updatedAt.toISOString(),
     })),
     nextCursor,
+  });
+  res.json(data);
+});
+
+router.get("/discover/trips/:id", async (req, res): Promise<void> => {
+  const paramsParse = GetPublicTripParams.safeParse(req.params);
+  if (!paramsParse.success) {
+    res.status(400).json({ error: paramsParse.error.message });
+    return;
+  }
+  const { id } = paramsParse.data;
+
+  // Same inner-join shape as the feed query so we never return a row whose
+  // author has no profile. We treat "no row" and "private trip" identically
+  // (404) so a stranger can't probe whether a private trip with a given id
+  // exists at all.
+  const rows = await db
+    .select({
+      payload: tripsTable.payload,
+      updatedAt: tripsTable.updatedAt,
+      handle: userProfilesTable.handle,
+    })
+    .from(tripsTable)
+    .innerJoin(
+      userProfilesTable,
+      eq(userProfilesTable.clerkUserId, tripsTable.userId),
+    )
+    .where(and(eq(tripsTable.id, id), eq(tripsTable.isPublic, true)))
+    .limit(1);
+
+  if (rows.length === 0) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+
+  const row = rows[0];
+  const data = GetPublicTripResponse.parse({
+    trip: row.payload,
+    author: { handle: row.handle },
+    updatedAt: row.updatedAt.toISOString(),
   });
   res.json(data);
 });

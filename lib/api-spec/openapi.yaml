@@ -156,6 +156,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DiscoverFeed"
+  /discover/trips/{id}:
+    get:
+      operationId: getPublicTrip
+      tags: [discover]
+      summary: Get a single public trip by id
+      description: >-
+        Returns one trip plus its author handle, but only if the trip has been
+        marked public. 404 covers both "no such trip" and "trip exists but is
+        private" so we never confirm to a stranger that a private trip exists.
+        Open endpoint — no authentication required.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public trip detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverItem"
+        "404":
+          description: No such public trip
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /users/{handle}:
     get:
       operationId: getPublicProfile

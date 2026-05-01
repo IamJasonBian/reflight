@@ -28,31 +28,45 @@ router.get("/me/profile", requireAuth, async (req, res): Promise<void> => {
     return;
   }
 
-  const created = await ensureUserProfile(userId, async () => {
-    try {
-      const user = await clerkClient.users.getUser(userId);
-      const primary = user.emailAddresses.find(
-        (e) => e.id === user.primaryEmailAddressId,
-      );
-      return (
-        primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? ""
-      );
-    } catch {
-      return "";
-    }
-  });
-
-  req.log.info(
-    { userId, handle: created.handle },
-    "created public profile on demand",
-  );
-
-  res.json(
-    GetMyProfileResponse.parse({
-      handle: created.handle,
-      createdAt: created.createdAt.toISOString(),
-    }),
-  );
+  // Let any Clerk failure propagate. We deliberately don't swallow-and-fallback
+  // because the very first ensureUserProfile call permanently writes the
+  // derived handle — assigning `user_<hash>` because Clerk happened to be
+  // briefly unavailable would brand the user with a noisy handle forever.
+  // 503 lets the client retry once Clerk is healthy again.
+  try {
+    const created = await ensureUserProfile(userId, () =>
+      fetchPrimaryEmail(userId),
+    );
+    req.log.info(
+      { userId, handle: created.handle },
+      "created public profile on demand",
+    );
+    res.json(
+      GetMyProfileResponse.parse({
+        handle: created.handle,
+        createdAt: created.createdAt.toISOString(),
+      }),
+    );
+  } catch (err) {
+    req.log.warn(
+      { userId, err: (err as Error).message },
+      "ensureUserProfile failed; client should retry",
+    );
+    res.status(503).json({ error: "Profile not yet available, please retry." });
+  }
 });
+
+async function fetchPrimaryEmail(userId: string): Promise<string> {
+  const user = await clerkClient.users.getUser(userId);
+  const primary = user.emailAddresses.find(
+    (e) => e.id === user.primaryEmailAddressId,
+  );
+  const email =
+    primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
+  if (!email) {
+    throw new Error(`Clerk user ${userId} has no email address`);
+  }
+  return email;
+}
 
 export default router;

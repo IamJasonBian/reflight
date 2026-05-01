@@ -53,19 +53,21 @@ router.put("/trips", requireAuth, async (req, res): Promise<void> => {
   // the trips transaction so that on profile-creation failure no public
   // trip ends up persisted that wouldn't be discoverable.
   if (publicCount > 0) {
-    await ensureUserProfile(userId, async () => {
-      try {
-        const user = await clerkClient.users.getUser(userId);
-        const primary = user.emailAddresses.find(
-          (e) => e.id === user.primaryEmailAddressId,
-        );
-        return (
-          primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? ""
-        );
-      } catch {
-        return "";
-      }
-    });
+    try {
+      await ensureUserProfile(userId, () => fetchPrimaryEmail(userId));
+    } catch (err) {
+      // Same reasoning as in /me/profile: never permanently bake a fallback
+      // handle just because Clerk was briefly unavailable. Surface the
+      // failure as 503; the mobile client's tripsSync layer will retry.
+      req.log.warn(
+        { userId, err: (err as Error).message },
+        "ensureUserProfile failed during PUT /trips; rejecting so client retries",
+      );
+      res
+        .status(503)
+        .json({ error: "Could not provision public profile, please retry." });
+      return;
+    }
   }
 
   await db.transaction(async (tx) => {
@@ -92,6 +94,19 @@ router.put("/trips", requireAuth, async (req, res): Promise<void> => {
   const data = ReplaceTripsResponse.parse(trips);
   res.json(data);
 });
+
+async function fetchPrimaryEmail(userId: string): Promise<string> {
+  const user = await clerkClient.users.getUser(userId);
+  const primary = user.emailAddresses.find(
+    (e) => e.id === user.primaryEmailAddressId,
+  );
+  const email =
+    primary?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
+  if (!email) {
+    throw new Error(`Clerk user ${userId} has no email address`);
+  }
+  return email;
+}
 
 // Hard-delete every trip we hold for this Clerk user. Called from the in-app
 // "Delete account" flow so that Branchwing data is purged as soon as the user

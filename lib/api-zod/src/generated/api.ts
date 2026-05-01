@@ -229,6 +229,60 @@ export const DiscoverTripsResponse = zod.object({
 });
 
 /**
+ * Returns one trip plus its author handle, but only if the trip has been marked public. 404 covers both "no such trip" and "trip exists but is private" so we never confirm to a stranger that a private trip exists. Open endpoint — no authentication required.
+ * @summary Get a single public trip by id
+ */
+export const GetPublicTripParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetPublicTripResponse = zod.object({
+  trip: zod.object({
+    id: zod.string(),
+    title: zod.string(),
+    originCity: zod.string(),
+    originCode: zod.string(),
+    startDate: zod.string(),
+    branches: zod.array(
+      zod.object({
+        id: zod.string(),
+        label: zod.string(),
+        parentId: zod.string().nullable(),
+        forkAfterSegmentId: zod.string().nullable(),
+        color: zod.string(),
+        segments: zod.array(
+          zod.object({
+            id: zod.string(),
+            fromCode: zod.string(),
+            fromCity: zod.string(),
+            toCode: zod.string(),
+            toCity: zod.string(),
+            depart: zod.string(),
+            arrive: zod.string(),
+            airline: zod.string(),
+            flightNo: zod.string(),
+            price: zod.number().nullish(),
+          }),
+        ),
+        createdAt: zod.string(),
+      }),
+    ),
+    activeBranchId: zod.string(),
+    createdAt: zod.string(),
+    isPublic: zod
+      .boolean()
+      .optional()
+      .describe("When true, this trip is visible in the public Discover feed."),
+  }),
+  author: zod.object({
+    handle: zod.string(),
+  }),
+  updatedAt: zod
+    .string()
+    .describe("Server timestamp of the last update to this trip."),
+});
+
+/**
  * Returns the public profile and every public trip for the user with the given handle. Handle lookup is case-insensitive. Returns 404 if no user with this handle exists. Open endpoint — no authentication required.
  * @summary Get a user's public profile and trips
  */

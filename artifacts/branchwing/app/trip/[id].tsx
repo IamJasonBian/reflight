@@ -1,8 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import * as Haptics from "expo-haptics";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Platform,
@@ -20,6 +20,8 @@ import { Pill } from "@/components/Pill";
 import { TimeSpine } from "@/components/TimeSpine";
 import { useColors } from "@/hooks/useColors";
 import { useTrips } from "@/contexts/TripsContext";
+import { fetchMyProfile } from "@/services/discoverApi";
+import { confirmAction } from "@/lib/confirm";
 import {
   branchHasAnyPrice,
   branchTotalPrice,
@@ -45,8 +47,28 @@ export default function TripScreen() {
     setTripPublic,
   } = useTrips();
   const [view, setView] = useState<ViewMode>("spine");
+  // Cached so the privacy-toggle confirmation can name the user's handle in
+  // the copy ("This trip will appear in Discover under @handle") AND so the
+  // post-confirm public-state row can render a tappable @handle pill linking
+  // to the public profile. Lazy-fetched the first time we need it, then
+  // cached for subsequent toggles within the same screen.
+  const [myHandle, setMyHandle] = useState<string | null>(null);
 
   const trip = id ? getTrip(id) : undefined;
+
+  // Pre-fetch the handle whenever the trip is already public, so the pill
+  // below the toggle row can render on initial mount without waiting for
+  // the user to interact. Cheap (single GET) and only runs once per id.
+  useEffect(() => {
+    if (!trip?.isPublic || myHandle) return;
+    let cancelled = false;
+    fetchMyProfile().then((me) => {
+      if (!cancelled && me) setMyHandle(me.handle);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [trip?.isPublic, myHandle]);
   const isWeb = Platform.OS === "web";
   const topPad = isWeb ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = isWeb ? Math.max(insets.bottom, 34) : insets.bottom;
@@ -151,6 +173,52 @@ export default function TripScreen() {
     );
   };
 
+  // The privacy toggle is destructive in both directions: going public
+  // exposes a private trip to the world, and going private removes a trip
+  // that strangers may have already bookmarked. Always confirm, and name
+  // the author's handle in the copy so they know exactly which public
+  // identity the trip will be associated with.
+  const confirmTogglePublic = async () => {
+    if (!trip) return;
+    if (Platform.OS !== "web") {
+      Haptics.selectionAsync().catch(() => {});
+    }
+    const goingPublic = !(trip.isPublic === true);
+
+    let handle = myHandle;
+    if (goingPublic && !handle) {
+      // Fetch handle on the fly so we can mention it in the dialog. If it
+      // fails (offline, server hiccup) we still allow the toggle but with a
+      // generic copy — the server-side ensureUserProfile path will derive
+      // and persist the handle on the next sync.
+      const me = await fetchMyProfile();
+      if (me) {
+        handle = me.handle;
+        setMyHandle(me.handle);
+      }
+    }
+
+    if (goingPublic) {
+      const handleSuffix = handle ? ` under @${handle}` : "";
+      const ok = await confirmAction({
+        title: "Make trip public?",
+        message: `"${trip.title}" will appear in Discover${handleSuffix} and on your public profile. Anyone — even people without an account — will be able to view its branches and flights. You can switch back to Private anytime.`,
+        confirmLabel: "Make public",
+        cancelLabel: "Cancel",
+      });
+      if (ok) setTripPublic(trip.id, true);
+    } else {
+      const ok = await confirmAction({
+        title: "Make trip private?",
+        message: `"${trip.title}" will be removed from Discover and your public profile. Only you will be able to see it.`,
+        confirmLabel: "Make private",
+        cancelLabel: "Cancel",
+        destructive: true,
+      });
+      if (ok) setTripPublic(trip.id, false);
+    }
+  };
+
   const confirmDeleteTrip = () => {
     Alert.alert("Delete trip?", `Remove "${trip.title}" and all branches?`, [
       { text: "Cancel", style: "cancel" },
@@ -251,12 +319,7 @@ export default function TripScreen() {
         </View>
 
         <Pressable
-          onPress={() => {
-            if (Platform.OS !== "web") {
-              Haptics.selectionAsync().catch(() => {});
-            }
-            setTripPublic(trip.id, !(trip.isPublic === true));
-          }}
+          onPress={confirmTogglePublic}
           accessibilityRole="switch"
           accessibilityState={{ checked: trip.isPublic === true }}
           accessibilityLabel={
@@ -309,6 +372,35 @@ export default function TripScreen() {
             />
           </View>
         </Pressable>
+
+        {trip.isPublic && myHandle ? (
+          <Pressable
+            onPress={() =>
+              router.push(`/users/${encodeURIComponent(myHandle)}` as Href)
+            }
+            accessibilityRole="link"
+            accessibilityLabel={`See your public profile @${myHandle}`}
+            style={({ pressed }) => [
+              styles.publicHandlePill,
+              {
+                backgroundColor: `${colors.primary}1F`,
+                opacity: pressed ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Feather name="user" size={12} color={colors.primary} />
+            <Text
+              style={[styles.publicHandleText, { color: colors.primary }]}
+            >
+              View as @{myHandle}
+            </Text>
+            <Feather
+              name="external-link"
+              size={11}
+              color={colors.primary}
+            />
+          </Pressable>
+        ) : null}
       </View>
 
       <View
@@ -528,6 +620,20 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
+  },
+  publicHandlePill: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  publicHandleText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
   },
   switch: {
     width: 38,

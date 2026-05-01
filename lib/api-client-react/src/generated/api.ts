@@ -18,6 +18,7 @@ import type {
 
 import type {
   DiscoverFeed,
+  DiscoverItem,
   DiscoverTripsParams,
   ErrorResponse,
   HealthStatus,
@@ -428,6 +429,94 @@ export function useDiscoverTrips<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getDiscoverTripsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns one trip plus its author handle, but only if the trip has been marked public. 404 covers both "no such trip" and "trip exists but is private" so we never confirm to a stranger that a private trip exists. Open endpoint — no authentication required.
+ * @summary Get a single public trip by id
+ */
+export const getGetPublicTripUrl = (id: string) => {
+  return `/api/discover/trips/${id}`;
+};
+
+export const getPublicTrip = async (
+  id: string,
+  options?: RequestInit,
+): Promise<DiscoverItem> => {
+  return customFetch<DiscoverItem>(getGetPublicTripUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPublicTripQueryKey = (id: string) => {
+  return [`/api/discover/trips/${id}`] as const;
+};
+
+export const getGetPublicTripQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicTrip>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicTrip>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPublicTripQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPublicTrip>>> = ({
+    signal,
+  }) => getPublicTrip(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicTrip>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicTripQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicTrip>>
+>;
+export type GetPublicTripQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a single public trip by id
+ */
+
+export function useGetPublicTrip<
+  TData = Awaited<ReturnType<typeof getPublicTrip>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicTrip>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicTripQueryOptions(id, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
