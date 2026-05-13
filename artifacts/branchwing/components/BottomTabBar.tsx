@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 
-type TabKey = "trips" | "discover";
+type TabKey = "trips" | "discover" | "account";
 
 const TABS: {
   key: TabKey;
@@ -16,6 +16,7 @@ const TABS: {
 }[] = [
   { key: "trips", label: "Trips", icon: "map", href: "/" },
   { key: "discover", label: "Discover", icon: "compass", href: "/discover" },
+  { key: "account", label: "Account", icon: "user", href: "/account" },
 ];
 
 export function BottomTabBar({ active }: { active: TabKey }) {

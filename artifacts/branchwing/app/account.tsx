@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import { useClerk, useReverification, useSession, useUser } from "@clerk/expo";
-import { useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -17,6 +16,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import {
+  BOTTOM_TAB_BAR_HEIGHT,
+  BottomTabBar,
+} from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
 import { dropUserCache } from "@/lib/storage";
 import { purgeRemoteTrips } from "@/services/tripsSync";
@@ -34,7 +37,6 @@ type ReverifyState = {
 
 export default function AccountScreen() {
   const colors = useColors();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { signOut } = useClerk();
   const { user } = useUser();
@@ -215,28 +217,15 @@ export default function AccountScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityLabel="Back"
-          style={({ pressed }) => [
-            styles.backBtn,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Feather name="chevron-left" size={20} color={colors.foreground} />
-        </Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>Account</Text>
-        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={[
           styles.body,
-          { paddingBottom: insets.bottom + 32 },
+          {
+            paddingBottom: insets.bottom + 32 + BOTTOM_TAB_BAR_HEIGHT,
+          },
         ]}
       >
         <View
@@ -333,6 +322,10 @@ export default function AccountScreen() {
           stored for you. This cannot be undone.
         </Text>
       </ScrollView>
+
+      <View style={styles.tabBarWrap} pointerEvents="box-none">
+        <BottomTabBar active="account" />
+      </View>
 
       <Modal
         visible={reverify !== null}
@@ -434,13 +427,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 12,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
+  tabBarWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   title: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
   body: { paddingHorizontal: 16, paddingTop: 8, gap: 12 },

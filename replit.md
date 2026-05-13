@@ -135,10 +135,10 @@ Discover (public trips, Task #2):
   AuthGate bootstrap calls `fetchMyProfile()` once per signed-in
   identity (with one 5s retry on null). Sign-out and account-delete
   call `clearCachedMyProfile()`.
-- UI: Discover entered via a real bottom tab bar (`components/BottomTabBar.tsx`)
-  with two tabs — Trips (home `/`) and Discover (`/discover`); shown on
-  both home and discover screens via `router.replace()` so back-stack stays
-  flat. `app/discover.tsx`
+- UI: Three-tab bottom nav (`components/BottomTabBar.tsx`) — Trips (`/`),
+  Discover (`/discover`), Account (`/account`); mounted on each tab root
+  screen. Tab switches use `router.replace()` so the back-stack stays flat.
+  Compass and user icons removed from the home header. `app/discover.tsx`
   list, `app/users/[handle].tsx` profile, `app/public-trips/[id].tsx`
   read-only trip viewer (no FAB, no New-Branch chip, no delete, no
   privacy toggle); `components/PublicTripCard.tsx` card with separate
