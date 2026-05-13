@@ -14,6 +14,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import {
+  BOTTOM_TAB_BAR_HEIGHT,
+  BottomTabBar,
+} from "@/components/BottomTabBar";
 import { useColors } from "@/hooks/useColors";
 import { useTrips } from "@/contexts/TripsContext";
 import {
@@ -82,21 +86,6 @@ export default function HomeScreen() {
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
           <Pressable
-            onPress={() => router.push("/discover")}
-            accessibilityLabel="Discover"
-            style={({ pressed }) => [
-              styles.newBtn,
-              {
-                backgroundColor: colors.card,
-                borderWidth: 1,
-                borderColor: colors.border,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-          >
-            <Feather name="compass" size={16} color={colors.mutedForeground} />
-          </Pressable>
-          <Pressable
             onPress={() => router.push("/account")}
             accessibilityLabel="Account"
             style={({ pressed }) => [
@@ -142,7 +131,7 @@ export default function HomeScreen() {
           keyExtractor={(t) => t.id}
           contentContainerStyle={[
             styles.list,
-            { paddingBottom: bottomPad + 32 },
+            { paddingBottom: bottomPad + 32 + BOTTOM_TAB_BAR_HEIGHT },
           ]}
           ListHeaderComponent={
             <Pressable
@@ -196,6 +185,10 @@ export default function HomeScreen() {
           )}
         />
       )}
+
+      <View style={styles.tabBarWrap} pointerEvents="box-none">
+        <BottomTabBar active="trips" />
+      </View>
     </View>
   );
 }
@@ -399,6 +392,12 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+  },
+  tabBarWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   header: {
     flexDirection: "row",

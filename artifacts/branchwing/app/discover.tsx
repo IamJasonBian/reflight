@@ -12,6 +12,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import {
+  BOTTOM_TAB_BAR_HEIGHT,
+  BottomTabBar,
+} from "@/components/BottomTabBar";
 import { PublicTripCard } from "@/components/PublicTripCard";
 import { useColors } from "@/hooks/useColors";
 import {
@@ -78,20 +82,6 @@ export default function DiscoverScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityLabel="Back"
-          style={({ pressed }) => [
-            styles.backBtn,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Feather name="chevron-left" size={20} color={colors.foreground} />
-        </Pressable>
         <View style={styles.titleBlock}>
           <Text style={[styles.eyebrow, { color: colors.mutedForeground }]}>
             Public itineraries
@@ -100,7 +90,6 @@ export default function DiscoverScreen() {
             Discover
           </Text>
         </View>
-        <View style={{ width: 36 }} />
       </View>
 
       {loading ? (
@@ -148,7 +137,10 @@ export default function DiscoverScreen() {
           keyExtractor={(it) => `${it.author.handle}-${it.trip.id}`}
           contentContainerStyle={[
             styles.list,
-            { paddingBottom: insets.bottom + 32 },
+            {
+              paddingBottom:
+                insets.bottom + 32 + BOTTOM_TAB_BAR_HEIGHT,
+            },
           ]}
           renderItem={({ item }) => (
             <PublicTripCard
@@ -181,6 +173,10 @@ export default function DiscoverScreen() {
           }
         />
       )}
+
+      <View style={styles.tabBarWrap} pointerEvents="box-none">
+        <BottomTabBar active="discover" />
+      </View>
     </View>
   );
 }
@@ -241,4 +237,10 @@ const styles = StyleSheet.create({
   },
   retryText: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
   footer: { padding: 16 },
+  tabBarWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
 });
