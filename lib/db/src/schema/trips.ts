@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -22,7 +23,18 @@ export const tripsTable = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.id] }),
-    publicFeedIdx: index("trips_public_feed_idx").on(t.isPublic, t.updatedAt),
+    // Partial expression index that matches the discover feed query exactly:
+    // ORDER BY date_trunc('ms', updated_at) DESC, user_id DESC, id DESC,
+    // filtered by is_public = true. Tie-break keys (user_id, id) make the
+    // sort total — (user_id, id) is the trips primary key, so the
+    // composite is globally unique even at the worst-case nanoid collision.
+    publicFeedExprIdx: index("trips_public_feed_expr_idx")
+      .on(
+        sql`(date_trunc('milliseconds', "updated_at" AT TIME ZONE 'UTC')) DESC`,
+        sql`"user_id" DESC`,
+        sql`"id" DESC`,
+      )
+      .where(sql`"is_public" = true`),
   }),
 );
 
