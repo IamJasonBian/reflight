@@ -6,6 +6,7 @@
   "scripts": {
     "hello": "tsx ./src/hello.ts",
     "test:discover-privacy": "tsx ./src/test-discover-privacy.ts",
+    "seed:spain": "tsx ./src/seed-spain-itinerary.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
