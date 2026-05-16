@@ -1,7 +1,5 @@
-import { sql } from "drizzle-orm";
 import {
   boolean,
-  index,
   jsonb,
   pgTable,
   primaryKey,
@@ -23,18 +21,12 @@ export const tripsTable = pgTable(
   },
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.id] }),
-    // Partial expression index that matches the discover feed query exactly:
-    // ORDER BY date_trunc('ms', updated_at) DESC, user_id DESC, id DESC,
-    // filtered by is_public = true. Tie-break keys (user_id, id) make the
-    // sort total — (user_id, id) is the trips primary key, so the
-    // composite is globally unique even at the worst-case nanoid collision.
-    publicFeedExprIdx: index("trips_public_feed_expr_idx")
-      .on(
-        sql`(date_trunc('milliseconds', "updated_at" AT TIME ZONE 'UTC')) DESC`,
-        sql`"user_id" DESC`,
-        sql`"id" DESC`,
-      )
-      .where(sql`"is_public" = true`),
+    // Indexes are managed by hand-written migrations in lib/db/drizzle/
+    // (run via `pnpm --filter @workspace/db run migrate`). The discover
+    // partial expression index is in 0001_discover_expression_index.sql.
+    // It is intentionally NOT declared here because drizzle-kit's
+    // serializer mangles multi-`sql` `.on()` calls into invalid DDL
+    // (interleaving `text_ops` opclass tokens between expressions).
   }),
 );
 
