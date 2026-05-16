@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     borderWidth: 1,
+    flexShrink: 0,
   },
   chipText: {
     flexShrink: 1,
