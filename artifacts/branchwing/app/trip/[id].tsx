@@ -274,12 +274,14 @@ export default function TripScreen() {
         </Text>
         <View style={styles.metaRow}>
           <Pill
+            size="sm"
             label={`${trip.branches.length} branch${trip.branches.length === 1 ? "" : "es"}`}
             color={colors.primary}
             bg={`${colors.primary}22`}
           />
           {tripSpan > 0 && (
             <Pill
+              size="sm"
               label={`${fmtDuration(tripSpan)} window`}
               color={colors.accent}
               bg={`${colors.accent}22`}
@@ -287,6 +289,7 @@ export default function TripScreen() {
           )}
           {totalDuration > 0 && (
             <Pill
+              size="sm"
               label={`${fmtDuration(totalDuration)} airborne`}
               color={colors.mutedForeground}
               bg={colors.muted}
@@ -294,6 +297,7 @@ export default function TripScreen() {
           )}
           {branchHasPrice && (
             <Pill
+              size="sm"
               label={`${fmtPrice(branchTotal)} total`}
               color="#fff"
               bg={activeBranch.color}

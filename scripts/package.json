@@ -7,7 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "test:discover-privacy": "tsx ./src/test-discover-privacy.ts",
     "seed:spain": "tsx ./src/seed-spain-itinerary.ts",
-    "test:branch-picker-dot": "tsx ./src/test-branch-picker-dot.ts",
+    "test:trip-meta-pills": "tsx ./src/test-trip-meta-pills.ts",
     "bench:discover": "tsx ./src/bench-discover.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
