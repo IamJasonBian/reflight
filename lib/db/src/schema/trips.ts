@@ -22,11 +22,15 @@ export const tripsTable = pgTable(
   (t) => ({
     pk: primaryKey({ columns: [t.userId, t.id] }),
     // Indexes are managed by hand-written migrations in lib/db/drizzle/
-    // (run via `pnpm --filter @workspace/db run migrate`). The discover
-    // partial expression index is in 0001_discover_expression_index.sql.
-    // It is intentionally NOT declared here because drizzle-kit's
-    // serializer mangles multi-`sql` `.on()` calls into invalid DDL
-    // (interleaving `text_ops` opclass tokens between expressions).
+    // (run via `pnpm --filter @workspace/db run migrate`). The current
+    // public-feed index is the simple `(is_public, updated_at)` btree
+    // declared in 0000 and re-asserted in 0002. We previously had a
+    // partial expression index over `date_trunc('ms', updated_at AT TIME
+    // ZONE 'UTC') DESC, user_id, id` but it was reverted in 0002: that
+    // shape trips a drizzle-kit serializer bug which Replit's publish-
+    // time schema differ also hits, producing invalid DDL like
+    // `(date_trunc(... text_ops, user_id timestamp_ops, id text_ops)`
+    // with a missing closing paren — every publish would fail.
   }),
 );
 
