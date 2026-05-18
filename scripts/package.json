@@ -8,6 +8,7 @@
     "test:discover-privacy": "tsx ./src/test-discover-privacy.ts",
     "seed:spain": "tsx ./src/seed-spain-itinerary.ts",
     "test:trip-meta-pills": "tsx ./src/test-trip-meta-pills.ts",
+    "test:branch-picker-chip": "tsx ./src/test-branch-picker-chip.ts",
     "bench:discover": "tsx ./src/bench-discover.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
