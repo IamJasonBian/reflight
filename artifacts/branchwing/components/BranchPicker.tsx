@@ -134,7 +134,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    maxWidth: 200,
+    // Horizontal ScrollView — let each chip size to its natural content
+    // (label + meta) and prevent the scroll row from compressing them.
+    // A generous maxWidth caps pathological labels without squashing
+    // common ones like "Via Reykjavik · 2 flights · $535".
+    flexShrink: 0,
+    maxWidth: 280,
   },
   dot: {
     width: 8,
@@ -145,6 +150,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     flexShrink: 1,
+    minWidth: 0,
   },
   chipLabel: {
     fontSize: 13,
