@@ -136,7 +136,10 @@ export default function SignInScreen() {
             ) : null}
           </View>
 
-          {submitError ? (
+          {/* Only show the catch-all error when no password field error already
+              covers it — otherwise a wrong password renders twice (once under
+              the field via `errors.fields.password`, once here). */}
+          {submitError && !errors.fields.password ? (
             <Text style={[styles.error, { color: colors.destructive, marginTop: 4 }]}>
               {submitError}
             </Text>
