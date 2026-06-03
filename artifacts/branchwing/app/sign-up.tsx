@@ -127,6 +127,17 @@ export default function SignUpScreen() {
           Send a new code
         </Text>
       </Pressable>
+
+      <View style={styles.footerRow}>
+        <Text style={{ color: colors.mutedForeground }}>Entered the wrong email?</Text>
+        <Link href={"/sign-in" as Href} asChild>
+          <Pressable>
+            <Text style={[styles.footerLink, { color: colors.primary }]}>
+              Back to sign in
+            </Text>
+          </Pressable>
+        </Link>
+      </View>
     </>
   );
 
