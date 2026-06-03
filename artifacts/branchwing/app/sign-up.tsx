@@ -27,10 +27,16 @@ export default function SignUpScreen() {
   const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
   const [submitError, setSubmitError] = React.useState<string | null>(null);
+  // Tracks whether the user kicked off verification in this session. Clerk's
+  // signUp resource is persisted client-side, so without this gate a stale
+  // in-progress sign-up would snap us back to the code step on a fresh mount
+  // (e.g. returning here after tapping "Back to sign in").
+  const [submitted, setSubmitted] = React.useState(false);
 
   const isFetching = fetchStatus === "fetching";
 
   const needsCode =
+    submitted &&
     signUp.status === "missing_requirements" &&
     signUp.unverifiedFields.includes("email_address") &&
     signUp.missingFields.length === 0;
@@ -43,6 +49,7 @@ export default function SignUpScreen() {
       return;
     }
     await signUp.verifications.sendEmailCode();
+    setSubmitted(true);
   };
 
   const handleVerify = async () => {
@@ -131,7 +138,15 @@ export default function SignUpScreen() {
       <View style={styles.footerRow}>
         <Text style={{ color: colors.mutedForeground }}>Entered the wrong email?</Text>
         <Link href={"/sign-in" as Href} asChild>
-          <Pressable>
+          <Pressable
+            onPress={() => {
+              // Abandon the in-progress verification so returning to sign-up
+              // shows a fresh form instead of this code step.
+              setSubmitted(false);
+              setCode("");
+              setSubmitError(null);
+            }}
+          >
             <Text style={[styles.footerLink, { color: colors.primary }]}>
               Back to sign in
             </Text>
