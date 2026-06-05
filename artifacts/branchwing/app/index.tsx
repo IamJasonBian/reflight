@@ -27,6 +27,7 @@ import {
   fmtPrice,
 } from "@/lib/time";
 import type { Trip } from "@/lib/types";
+import { tripValidity, type TripStatus } from "@/lib/validity";
 import { fetchPopularRoutes, fetchPriceHistory } from "@/services/api";
 
 export default function HomeScreen() {
@@ -198,6 +199,8 @@ function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
   const minPrice = branchTotals.length ? Math.min(...branchTotals) : null;
   const maxPrice = branchTotals.length ? Math.max(...branchTotals) : null;
 
+  const { status } = tripValidity(trip);
+
   return (
     <Pressable
       onPress={onPress}
@@ -219,6 +222,7 @@ function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
             {trip.title}
           </Text>
         </View>
+        <TripStatusBadge status={status} />
         <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
       </View>
 
@@ -290,6 +294,22 @@ function TripCard({ trip, onPress }: { trip: Trip; onPress: () => void }) {
         </View>
       )}
     </Pressable>
+  );
+}
+
+function TripStatusBadge({ status }: { status: TripStatus }) {
+  // Only flag trips that have started or finished; upcoming/empty stay clean.
+  if (status !== "past" && status !== "in-progress") return null;
+  const cfg =
+    status === "past"
+      ? { color: "#8893B8", label: "Past" }
+      : { color: "#F2B544", label: "In progress" };
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: `${cfg.color}22` }]}>
+      <Text style={[styles.statusBadgeText, { color: cfg.color }]}>
+        {cfg.label}
+      </Text>
+    </View>
   );
 }
 
@@ -479,7 +499,19 @@ const styles = StyleSheet.create({
   cardHead: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
     marginBottom: 14,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   cardEyebrow: {
     fontSize: 11,

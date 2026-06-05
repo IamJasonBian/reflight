@@ -25,7 +25,8 @@ import type { RoutePriceHistory } from "@/lib/types";
 import {
   estimateFlightMinutes,
 } from "@/lib/flightSearch";
-import { fmtDuration, fmtPrice, fmtTime } from "@/lib/time";
+import { fmtDate, fmtDuration, fmtPrice, fmtTime } from "@/lib/time";
+import { isPast } from "@/lib/validity";
 
 type Tab = "flights" | "trends";
 
@@ -188,7 +189,7 @@ export default function RouteDetailScreen() {
           <SegmentedControl
             value={tab}
             options={[
-              { value: "flights", label: "Flights today" },
+              { value: "flights", label: "Flights" },
               { value: "trends", label: "Price trends" },
             ]}
             onChange={setTab}
@@ -303,39 +304,57 @@ function FlightsTab({
 
       {flights.length === 0 ? (
         <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-          Loading flights for today…
+          Loading flights…
         </Text>
       ) : (
-        flights.map((f) => (
-          <View
-            key={f.id}
-            style={[
-              styles.flightRow,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <View style={styles.flightTimeCol}>
-              <Text style={[styles.flightTime, { color: colors.foreground }]}>
-                {fmtTime(f.depart)}
-              </Text>
-              <Text style={[styles.flightSub, { color: colors.mutedForeground }]}>
-                {fmtTime(f.arrive)}
+        flights.map((f) => {
+          const departed = isPast(f.depart);
+          return (
+            <View
+              key={f.id}
+              style={[
+                styles.flightRow,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  opacity: departed ? 0.55 : 1,
+                },
+              ]}
+            >
+              <View style={styles.flightTimeCol}>
+                <Text style={[styles.flightTime, { color: colors.foreground }]}>
+                  {fmtTime(f.depart)}
+                </Text>
+                <Text style={[styles.flightSub, { color: colors.mutedForeground }]}>
+                  {fmtTime(f.arrive)}
+                </Text>
+              </View>
+              <View style={styles.flightMid}>
+                <View style={styles.flightAirlineRow}>
+                  <Text
+                    style={[styles.flightAirline, { color: colors.foreground }]}
+                    numberOfLines={1}
+                  >
+                    {f.airline}
+                  </Text>
+                  {departed && (
+                    <View style={styles.departedBadge}>
+                      <Text style={styles.departedText}>Departed</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.flightSub, { color: colors.mutedForeground }]}>
+                  {fmtDate(f.depart)} · {f.flightNo} ·{" "}
+                  {fmtDuration(f.durationMin * 60 * 1000)} ·{" "}
+                  {f.stops > 0 ? `${f.stops} stop` : "nonstop"}
+                </Text>
+              </View>
+              <Text style={[styles.flightPrice, { color: colors.foreground }]}>
+                {fmtPrice(f.price)}
               </Text>
             </View>
-            <View style={styles.flightMid}>
-              <Text style={[styles.flightAirline, { color: colors.foreground }]} numberOfLines={1}>
-                {f.airline}
-              </Text>
-              <Text style={[styles.flightSub, { color: colors.mutedForeground }]}>
-                {f.flightNo} · {fmtDuration(f.durationMin * 60 * 1000)} ·{" "}
-                {f.stops > 0 ? `${f.stops} stop` : "nonstop"}
-              </Text>
-            </View>
-            <Text style={[styles.flightPrice, { color: colors.foreground }]}>
-              {fmtPrice(f.price)}
-            </Text>
-          </View>
-        ))
+          );
+        })
       )}
     </View>
   );
@@ -526,7 +545,25 @@ const styles = StyleSheet.create({
   flightTime: { fontSize: 16, fontFamily: "Inter_700Bold" },
   flightSub: { fontSize: 11, fontFamily: "Inter_500Medium", marginTop: 2 },
   flightMid: { flex: 1 },
-  flightAirline: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  flightAirlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  flightAirline: { fontSize: 13, fontFamily: "Inter_600SemiBold", flexShrink: 1 },
+  departedBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 999,
+    backgroundColor: "#8893B822",
+  },
+  departedText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    color: "#8893B8",
+  },
   flightPrice: { fontSize: 15, fontFamily: "Inter_700Bold" },
   trendCard: { borderRadius: 18, borderWidth: 1, padding: 12 },
   detailGrid: { borderRadius: 18, borderWidth: 1, paddingHorizontal: 14 },
