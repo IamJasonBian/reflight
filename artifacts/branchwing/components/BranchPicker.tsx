@@ -60,10 +60,7 @@ export function BranchPicker({
             <View
               style={[
                 styles.dot,
-                {
-                  backgroundColor: active ? "#fff" : b.color,
-                  borderColor: active ? "#fff" : b.color,
-                },
+                { backgroundColor: active ? "#fff" : b.color },
               ]}
             />
             <View style={styles.chipText}>
@@ -129,15 +126,26 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    // Boundary-safety invariant (asserted in scripts/test-branch-picker-chip):
+    //   borderRadius <= paddingVertical + borderWidth.
+    // This keeps each rounded corner entirely inside the vertical padding
+    // band, so the left/right edges stay perfectly straight alongside every
+    // text row. The horizontal text→boundary clearance is then exactly
+    // `paddingHorizontal` for *every* render case (short label, maxWidth-
+    // capped label, one line or two) — the rounded boundary can never curve
+    // in and touch or clip the label/meta. A full pill (borderRadius 999 =
+    // height/2) violates this: its widest point sits at mid-height where the
+    // text rows live, so the curve encroaches by an amount that depends on
+    // the chip's content height — i.e. inconsistent across edge cases.
+    borderRadius: 12,
     borderWidth: 1,
-    // Horizontal ScrollView — let each chip size to its natural content
-    // (label + meta) and prevent the scroll row from compressing them.
-    // A generous maxWidth caps pathological labels without squashing
-    // common ones like "Via Reykjavik · 2 flights · $535".
+    // Horizontal ScrollView: size each chip to its content and never let the
+    // scroll row compress it. maxWidth caps pathological labels (chipText
+    // ellipsizes) without squashing common ones like the "Via Reykjavik ·
+    // 2 flights · $535" combo.
     flexShrink: 0,
     maxWidth: 280,
   },
@@ -145,7 +153,8 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    borderWidth: 1,
+    // Solid swatch — no border. A same-colour 1px border only shrinks the
+    // visible fill under box-sizing: border-box and adds nothing.
     flexShrink: 0,
   },
   chipText: {
@@ -166,9 +175,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 999,
+    // Same geometry as `chip` so the row reads as one coherent set.
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderStyle: "dashed",
   },
