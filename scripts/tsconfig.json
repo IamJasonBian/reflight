@@ -5,5 +5,15 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  // These tests import real modules from sibling packages (branchwing,
+  // api-server) by relative .ts path to exercise their runtime behaviour.
+  // That crosses this package's rootDir, so they are typechecked by being
+  // executed via tsx (the test:* scripts), not by this project's tsc build.
+  "exclude": [
+    "src/test-time-utils.ts",
+    "src/test-flight-search.ts",
+    "src/test-discover-cursor.ts",
+    "src/test-handle.ts"
+  ]
 }

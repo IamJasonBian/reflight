@@ -65,6 +65,11 @@ export default function SearchFlightsScreen() {
 
   const results = useMemo(() => {
     if (!from || !to || from.code === to.code) return [];
+    // Intentionally synthetic (not services/api.fetchFlights): this search is
+    // date-specific, and the real Amadeus seed is a single-date snapshot that
+    // can't answer an arbitrary `date`. Browsing real popular-route offers
+    // lives in route/[od]; building a trip here stays on the synthetic catalog
+    // until a live date-aware flight proxy exists. See lib/flags.ts.
     return sortFlights(
       searchFlights({
         originCode: from.code,
