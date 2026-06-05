@@ -18,6 +18,7 @@ import {
 } from "@/lib/flightSearch";
 import { buildPriceHistory } from "@/lib/priceHistory";
 import { DEFAULT_ROUTES } from "@/lib/defaultRoutes";
+import { USE_SEEDED_FLIGHTS } from "@/lib/flags";
 import {
   getSeededRoute,
   hasSeededRoutes,
@@ -35,10 +36,16 @@ export const API_SOURCE: ApiSource =
 export async function fetchFlights(
   params: SearchParams,
 ): Promise<FlightOption[]> {
-  // Popular routes are seeded with real Amadeus offers; serve those directly.
-  const seeded = getSeededRoute(params.originCode, params.destCode);
-  if (seeded && seeded.flights.length > 0) {
-    return seeded.flights;
+  // Popular routes are seeded with real Amadeus offers; serve those directly
+  // when the flag is on. Note: the seed is a single-date snapshot, so this
+  // ignores params.date — callers that need date-specific results (the
+  // add-segment search) use the synthetic catalog instead.
+  if (USE_SEEDED_FLIGHTS) {
+    const seeded = getSeededRoute(params.originCode, params.destCode);
+    if (seeded && seeded.flights.length > 0) {
+      // Return a copy so callers can sort/mutate without corrupting the seed.
+      return seeded.flights.slice();
+    }
   }
   // Otherwise fall back to the local synthetic catalog. The remote branch would
   // call the Netlify proxy:
@@ -49,10 +56,10 @@ export async function fetchFlights(
 export async function fetchPopularRoutes(): Promise<RouteMeta[]> {
   // Prefer the seeded routes (real cheapest price). Merge in any DEFAULT_ROUTES
   // that weren't seeded so the list never shrinks if a route returns no offers.
-  const seeded = seededRouteMetas();
-  if (!hasSeededRoutes()) {
+  if (!USE_SEEDED_FLIGHTS || !hasSeededRoutes()) {
     return [...DEFAULT_ROUTES].sort((a, b) => b.popularity - a.popularity);
   }
+  const seeded = seededRouteMetas();
   const seededKeys = new Set(seeded.map((r) => `${r.fromCode}-${r.toCode}`));
   const merged = [
     ...seeded,
@@ -69,7 +76,8 @@ export async function fetchPriceHistory(
   basePrice?: number,
 ): Promise<RoutePriceHistory> {
   // Anchor the synthetic 90-day history on the real seeded price when we have
-  // one, so the chart and "today" figure line up with the seeded offers.
-  const seeded = getSeededRoute(fromCode, toCode);
+  // one (and the flag is on), so the chart and "today" figure line up with the
+  // seeded offers. The history curve itself stays synthetic either way.
+  const seeded = USE_SEEDED_FLIGHTS ? getSeededRoute(fromCode, toCode) : null;
   return buildPriceHistory(fromCode, toCode, seeded?.basePrice ?? basePrice);
 }
