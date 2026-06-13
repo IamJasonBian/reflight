@@ -18,18 +18,15 @@ import { DateTimeField } from "@/components/DateTimeField";
 import { useColors } from "@/hooks/useColors";
 import { useTrips } from "@/contexts/TripsContext";
 import { type Airport } from "@/lib/airports";
-import { fetchFlights } from "@/services/api";
 
 export default function NewTripScreen() {
   const colors = useColors();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { createTrip, addSegment } = useTrips();
+  const { createTrip } = useTrips();
 
   const [title, setTitle] = useState<string>("");
   const [origin, setOrigin] = useState<Airport | null>(null);
-  const [destination, setDestination] = useState<Airport | null>(null);
-  const [saving, setSaving] = useState(false);
   const [date, setDate] = useState<string>(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
@@ -37,51 +34,16 @@ export default function NewTripScreen() {
     return d.toISOString();
   });
 
-  const canSave = title.trim().length > 0 && !!origin && !saving;
+  const canSave = title.trim().length > 0 && origin;
 
-  const onSave = async () => {
-    if (!canSave || !origin || saving) return;
-    setSaving(true);
+  const onSave = () => {
+    if (!canSave || !origin) return;
     const trip = createTrip({
       title: title.trim(),
       originCity: origin.city,
       originCode: origin.code,
       startDate: date,
     });
-
-    // If a destination was chosen, seed the Main branch with the cheapest
-    // flight on that route so the trip opens with a real first leg instead
-    // of an empty branch. Best-effort: a created trip is never blocked on
-    // the (synthetic) flight lookup.
-    if (destination && destination.code !== origin.code) {
-      try {
-        const flights = await fetchFlights({
-          originCode: origin.code,
-          destCode: destination.code,
-          date,
-        });
-        const cheapest = flights.reduce<(typeof flights)[number] | null>(
-          (best, f) => (best === null || f.price < best.price ? f : best),
-          null,
-        );
-        if (cheapest) {
-          addSegment(trip.id, trip.activeBranchId, {
-            fromCode: cheapest.fromCode,
-            fromCity: cheapest.fromCity,
-            toCode: cheapest.toCode,
-            toCity: cheapest.toCity,
-            depart: cheapest.depart,
-            arrive: cheapest.arrive,
-            airline: cheapest.airline,
-            flightNo: cheapest.flightNo,
-            price: cheapest.price,
-          });
-        }
-      } catch {
-        // Seeding is best-effort; fall through and open the trip as-is.
-      }
-    }
-
     router.replace(`/trip/${trip.id}`);
   };
 
@@ -152,21 +114,6 @@ export default function NewTripScreen() {
             label="Departing from"
             value={origin}
             onChange={setOrigin}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <AirportPicker
-            label="Going to (optional)"
-            value={destination}
-            onChange={(a) => {
-              setDestination(a);
-              // Pre-fill the trip name from the route if the user hasn't
-              // typed one yet; never clobber an edited title.
-              if (!title.trim() && origin) {
-                setTitle(`${origin.city} → ${a.city}`);
-              }
-            }}
           />
         </View>
 
